@@ -34,6 +34,53 @@ make check                  # every deck compiles, no slide overflows
 make pdf                    # out/<deck>.pdf
 ```
 
+## Editing slides
+
+The dev server (`make serve`) is made for writing:
+
+- **Live reload.** It keeps the compiler warm, so saving a `.typ` file shows
+  the change in about 100 ms. Only the changed pages are re-rendered, and the
+  position in the deck, widget states and drawings are kept. Errors show in
+  the browser.
+- **From the slide to its source and back.** **E** opens the slide's source
+  in VS Code, and **shift-E** shows the chain of `#include`s down to it. The
+  other way, a VS Code task (*Show slide in Typst deck*, set up by
+  `make install-vscode` with the Tinymist settings) moves the open decks to
+  the slide under the cursor.
+- **Overflow.** **O** lists the slides whose content overflows; from there you
+  can go to a slide or edit its source. An overflowing step has a red bar
+  with the excess height, and `make check` fails on any overflow.
+- **Placing labels with the mouse.** **shift-O** lets you drag an
+  annotation's label (`#annot`) into place and resize it. The position is
+  written back into the source (`dx:`, `dy:`, `width:`).
+- **Finding a slide.** **T** opens the structure browser: sections, slides,
+  times against the target, slide types and work-in-progress markers.
+  `make outline` prints the same in the terminal. Slide addresses use the
+  title, so they stay the same when slides are added above.
+- **Images.** `#img(path(…), origin: …)` fetches a missing image once from
+  its origin (a URL or a Zotero annotation) and resizes it (`make images`).
+  `optimize-images`, `unused-media` and `compute-svg-bb` keep the media folder
+  lean.
+
+## Zotero
+
+The bibliography is the course's Better BibTeX export from Zotero: entries
+are never typed by hand.
+
+- **Citing.** `#reference(<key>)` puts the full reference at the bottom of the
+  slide, and `#cite(<key>)` cites inline. `cathedra sync` (run by
+  `make setup`) reports duplicate keys with their lines, so you can merge the
+  items in Zotero.
+- **Links.** In the dev server, the icon in front of a reference opens the
+  item in the Zotero app; in a built deck or PDF it links to the DOI or URL.
+  `cathedra sync` asks the running Zotero for these links, and handles group
+  libraries and items from other users' libraries.
+- **Figures from papers.** A Zotero image annotation, i.e. a region selected
+  in a PDF, can be the `origin:` of an `#img`. The picture Zotero rendered is
+  copied into the course, and the image keeps a link back to the annotation.
+- **Z** in the dev server opens the Zotero item of the slide's references
+  and figures, with a picker when there are several.
+
 ## Without cathedra
 
 A course never depends on this package being maintained: a clone compiles
