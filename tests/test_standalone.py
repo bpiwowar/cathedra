@@ -128,7 +128,8 @@ def test_migration_4(tmp_path, monkeypatch):
     for _, fn in migrate.MIGRATIONS[4]:
         s, _, sk = fn(s, tmp_path / "x.typ")
         skipped += sk
-    assert "#let course-data = if generated { (" in s and ") } else { (:) }" in s
+    assert "#let course-data = if generated {\n  (\n    ref-links" in s
+    assert "  )\n} else { (:) }" in s
     assert "image-cache" not in s and "Read only when typst-slides compiles" in s
     assert 'bibliography("/src/main.bib", style: bib-style' in s
     assert len(skipped) == 1 and "origin" in skipped[0][1]

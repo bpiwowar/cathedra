@@ -334,7 +334,9 @@ def generated_data(s: str, path: Path):
     close = match(s, m.end() - 1)
     inner = s[m.end() : close]
     inner = re.sub(r"(?m)^[ \t]*image-cache\s*:[^\n]*\n", "", inner)
-    body = "#let course-data = if generated { (" + inner + ") } else { (:) }"
+    # as typstyle writes it (the block indented once more)
+    inner = re.sub(r"(?m)^(?=[ \t]*\S)", "  ", inner)
+    body = "#let course-data = if generated {\n  (" + inner + "  )\n} else { (:) }"
     s = s[: m.start()] + body + s[close + 1 :]
     s = s.replace(OLD_DATA_COMMENT, DATA_COMMENT)
     return s, 1, []
