@@ -1,4 +1,4 @@
-// The page `typst-slides snapshots` photographs: one widget at a time, at its
+// The page `cathedra snapshots` photographs: one widget at a time, at its
 // slot's size, in a given state: props added to its own (`step` among them;
 // without one, the final step). The component also gets `snapshot: true`, to
 // leave out what only makes sense live (a play button…).

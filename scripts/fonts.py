@@ -5,7 +5,7 @@
 # ///
 """Convert the viewer's Font Awesome Free webfonts (WOFF2, OFL) to TTF for Typst.
 
-Typst cannot read WOFF2; the TTFs go to src/typst_slides/typst/fonts/
+Typst cannot read WOFF2; the TTFs go to src/cathedra/typst/fonts/
 (committed: the package ships them), which every compilation gets as a font
 path. Run after upgrading @fortawesome/fontawesome-free in viewer/:
 
@@ -19,7 +19,7 @@ from fontTools.ttLib import TTFont
 
 here = pathlib.Path(__file__).resolve().parent.parent
 src = here / "viewer/node_modules/@fortawesome/fontawesome-free/webfonts"
-dst = here / "src/typst_slides/typst/fonts"
+dst = here / "src/cathedra/typst/fonts"
 dst.mkdir(exist_ok=True)
 for name in ("fa-solid-900", "fa-regular-400"):
     font = TTFont(src / f"{name}.woff2")

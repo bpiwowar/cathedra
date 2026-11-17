@@ -3,7 +3,7 @@ default_install_hook_types:
   - commit-msg
 
 # The built viewer is committed but generated: never let any hook touch it.
-exclude: ^src/typst_slides/data/
+exclude: ^src/cathedra/data/
 
 repos:
 - hooks:

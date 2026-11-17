@@ -74,7 +74,7 @@ impl SlidesWorld {
         let vpath = VirtualPath::virtualize(&root, &main_path)
             .map_err(|_| format!("{} is not under {}", main.display(), root.display()))?;
         let main = RootedPath::new(VirtualRoot::Project, vpath).intern();
-        let user_agent = concat!("typst-slides/", env!("CARGO_PKG_VERSION"));
+        let user_agent = concat!("cathedra/", env!("CARGO_PKG_VERSION"));
         let packages = SystemPackages::new(SystemDownloader::new(user_agent));
         Ok(Self {
             workdir: std::env::current_dir().unwrap_or_else(|_| root.clone()),

@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from typst_slides.annot import find_annot_calls, pick_annot_call, set_annot_args
-from typst_slides.apidoc import api_markdown
-from typst_slides.outline import fmt_minutes, parse_duration
-from typst_slides.spacing import space_slides
+from cathedra.annot import find_annot_calls, pick_annot_call, set_annot_args
+from cathedra.apidoc import api_markdown
+from cathedra.outline import fmt_minutes, parse_duration
+from cathedra.spacing import space_slides
 
 
 def test_annot_rewrite():

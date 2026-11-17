@@ -6,9 +6,9 @@ import json
 
 from typer.testing import CliRunner
 
-from typst_slides.build import DeckBuild, slug
-from typst_slides.cli import app
-from typst_slides.site import index_html
+from cathedra.build import DeckBuild, slug
+from cathedra.cli import app
+from cathedra.site import index_html
 
 
 def test_web_deck(course, course_dir):

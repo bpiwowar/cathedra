@@ -1,5 +1,5 @@
 // The course's own React widgets: widgets.js next to the page, bundled by
-// typst-slides from the course's widgets/index.ts (`export default { id:
+// cathedra from the course's widgets/index.ts (`export default { id:
 // {component, steps?, async?} }`) when it has one (`data-widgets` on the
 // body). The bundle does not carry React: its `react`, `react-dom` and
 // `react/jsx-runtime` imports are shims (data/viewer-shims/) reading the

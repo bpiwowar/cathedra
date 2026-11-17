@@ -1,5 +1,5 @@
-#import "/slide-app/lib/slides.typ": *
-#import "/slide-app/templates/academic/academic.typ": academic
+#import "/cathedra/lib/slides.typ": *
+#import "/cathedra/templates/academic/academic.typ": academic
 
 #let course-data = if generated {
   (

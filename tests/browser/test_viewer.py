@@ -4,7 +4,7 @@ live-test` in a course, or by hand):
     SLIDES_URL=http://localhost:8000 SLIDES_COURSE=<course dir> \\
         uv run --extra browser pytest -m browser tests/browser
 
-SLIDES_URL is a deck served by `typst-slides serve`; SLIDES_COURSE, its
+SLIDES_URL is a deck served by `cathedra serve`; SLIDES_COURSE, its
 course directory, for the live-update test (a source file is edited, then
 restored). Skipped without SLIDES_URL or Playwright.
 """

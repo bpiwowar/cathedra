@@ -1,5 +1,5 @@
 {
-  "name": "typst-slides-viewer",
+  "name": "cathedra-viewer",
   "private": true,
   "type": "module",
   "dependencies": {
@@ -14,7 +14,7 @@
     "@types/markdown-it": "14.1.2",
     "esbuild": "0.25.5"
   },
-  "description": "typst-slides' browser viewer (Reveal.js, SVG pages, widgets); built into the Python package",
+  "description": "cathedra' browser viewer (Reveal.js, SVG pages, widgets); built into the Python package",
   "scripts": {
     "build": "node build.mjs",
     "watch": "node build.mjs --watch"

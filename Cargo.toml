@@ -1,8 +1,8 @@
-# The native part of typst-slides (typst_slides._native, built by maturin):
+# The native part of cathedra (cathedra._native, built by maturin):
 # Typst (crates.io) compiling the decks, SVG pages with what the viewer
 # needs (text layer, internal links), PDF export, queries.
 [package]
-name = "typst-slides-native"
+name = "cathedra-native"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"

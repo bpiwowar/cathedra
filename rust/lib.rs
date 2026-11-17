@@ -1,4 +1,4 @@
-//! typst_slides._native: Typst for typst-slides.
+//! cathedra._native: Typst for cathedra.
 //!
 //! - `Compiler(root, main, font_paths, inputs)`: a warm compiler for one deck
 //!   (the course directory as Typst's root). Each `compile()` reads the files
@@ -38,7 +38,7 @@ fn err(e: impl std::fmt::Display) -> PyErr {
 
 /// A diagnostic: severity ("error" | "warning"), message, and the text the
 /// typst CLI prints for it (location, source excerpt, hints).
-#[pyclass(frozen, get_all, module = "typst_slides._native")]
+#[pyclass(frozen, get_all, module = "cathedra._native")]
 #[derive(Clone)]
 struct Diagnostic {
     severity: String,
@@ -81,7 +81,7 @@ fn diagnostics(world: &SlidesWorld, diags: &[SourceDiagnostic]) -> Vec<Diagnosti
 }
 
 /// A compiled document.
-#[pyclass(frozen, module = "typst_slides._native")]
+#[pyclass(frozen, module = "cathedra._native")]
 struct Document {
     doc: Arc<PagedDocument>,
     world: Arc<Mutex<SlidesWorld>>,
@@ -223,7 +223,7 @@ impl Document {
 
 /// The result of a compilation: the document (None on error), the
 /// diagnostics (errors, then warnings) and the files it read.
-#[pyclass(frozen, get_all, module = "typst_slides._native")]
+#[pyclass(frozen, get_all, module = "cathedra._native")]
 struct CompileResult {
     document: Option<Py<Document>>,
     diagnostics: Vec<Diagnostic>,
@@ -231,7 +231,7 @@ struct CompileResult {
 }
 
 /// A warm compiler for one deck.
-#[pyclass(frozen, module = "typst_slides._native")]
+#[pyclass(frozen, module = "cathedra._native")]
 struct Compiler {
     world: Arc<Mutex<SlidesWorld>>,
     cache: Arc<Mutex<pages::PageCache>>,

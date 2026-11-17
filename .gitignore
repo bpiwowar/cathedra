@@ -9,5 +9,5 @@ build/
 *.egg-info/
 *.tgz
 target/
-src/typst_slides/*.so
-src/typst_slides/*.pyd
+src/cathedra/*.so
+src/cathedra/*.pyd

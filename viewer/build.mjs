@@ -1,9 +1,9 @@
 // Builds the browser viewer into the Python package (committed, so that
-// installing typst-slides needs no Node):
+// installing cathedra needs no Node):
 //
-//   src/typst_slides/data/viewer/        main.js + main.css (the deck viewer),
+//   src/cathedra/data/viewer/        main.js + main.css (the deck viewer),
 //                                        snapshot.js (widget pictures), img/
-//   src/typst_slides/data/viewer-shims/  react, react-dom, react/jsx-runtime
+//   src/cathedra/data/viewer-shims/  react, react-dom, react/jsx-runtime
 //                                        for the courses' widget bundles: they
 //                                        re-export the viewer's React (one copy)
 //
@@ -14,7 +14,7 @@ import { createRequire } from "node:module";
 import * as esbuild from "esbuild";
 
 const HERE = path.dirname(new URL(import.meta.url).pathname);
-const DATA = path.resolve(HERE, "../src/typst_slides/data");
+const DATA = path.resolve(HERE, "../src/cathedra/data");
 const OUT = path.join(DATA, "viewer");
 const SHIMS = path.join(DATA, "viewer-shims");
 const require = createRequire(import.meta.url);

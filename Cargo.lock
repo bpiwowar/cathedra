@@ -166,6 +166,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f1fe948ff07f4bd06c30984e69f5b4899c516a3ef74f34df92a2df2ab535495"
 
 [[package]]
+name = "cathedra-native"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "comemo",
+ "parking_lot",
+ "pyo3",
+ "rayon",
+ "serde_json",
+ "termcolor",
+ "typst",
+ "typst-eval",
+ "typst-kit",
+ "typst-layout",
+ "typst-pdf",
+ "typst-render",
+ "typst-svg",
+]
+
+[[package]]
 name = "cc"
 version = "1.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2959,26 +2979,6 @@ dependencies = [
  "typst-macros",
  "typst-timing",
  "typst-utils",
-]
-
-[[package]]
-name = "typst-slides-native"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.1",
- "comemo",
- "parking_lot",
- "pyo3",
- "rayon",
- "serde_json",
- "termcolor",
- "typst",
- "typst-eval",
- "typst-kit",
- "typst-layout",
- "typst-pdf",
- "typst-render",
- "typst-svg",
 ]
 
 [[package]]

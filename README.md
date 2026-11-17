@@ -1,4 +1,4 @@
-# typst-slides
+# cathedra
 
 Lecture slides written in [Typst](https://typst.app/docs/) with the
 [Touying](https://touying-typ.github.io/) package, shown in the browser by a
@@ -11,19 +11,19 @@ This help opens with **H** in the dev server (`make serve`).
 ## Install
 
 A Python package (Python 3.11 or later) with Typst built in: nothing else to
-install (no Node, no typst CLI). The `typst-slides` command runs from a
+install (no Node, no typst CLI). The `cathedra` command runs from a
 course's directory:
 
 ```bash
-uvx typst-slides --help                  # or: pip install typst-slides
-uvx --from 'typst-slides[browser]' typst-slides snapshots   # widget pictures
+uvx cathedra --help                  # or: pip install cathedra
+uvx --from 'cathedra[browser]' cathedra snapshots   # widget pictures
 ```
 
 Extras: `browser` (Playwright: widget pictures for the PDFs, viewer tests;
 then `playwright install chromium`), `convert` (MDX to Typst, with pandoc).
 A course drives it through make (`makefile.mk`, see [setting up a
-course](docs/course.md)), which calls `uvx typst-slides …`, or the version of
-a slide-app checkout (e.g. a git submodule) with `uv run --project`.
+course](docs/course.md)), which calls `uvx cathedra …`, or the version of
+a cathedra checkout (e.g. a git submodule) with `uv run --project`.
 
 ## Quick start (in a course)
 
@@ -34,52 +34,52 @@ make check                  # every deck compiles, no slide overflows
 make pdf                    # out/<deck>.pdf
 ```
 
-## Without typst-slides
+## Without cathedra
 
 A course never depends on this package being maintained: a clone compiles
 to PDF with plain `typst compile`, so its authors can stop using the tool at
 any time. Typst does all of the typesetting, with the same packages and fonts
 as the typst CLI. The tool adds the web version (viewer, live widgets), the
 site, and generated files that only improve the PDFs (reference links,
-pictures of the widgets): the course reads them only when typst-slides
+pictures of the widgets): the course reads them only when cathedra
 compiles. The rest is in git: the decks cite the course's `.bib` itself,
 fetched images are committed. `make check` enforces it: it also compiles
 every deck as plain typst does, and fails if that needs a file git ignores.
-See [building](docs/building.md#without-typst-slides).
+See [building](docs/building.md#without-cathedra).
 
 ## Engine and course
 
-The engine is the `typst-slides` package (its Typst files: `slide-app/` in
-the course, a link `typst-slides setup` makes, or the `typst/` directory of a
-slide-app submodule); a course only holds its content and its configuration:
+The engine is the `cathedra` package (its Typst files: `cathedra/` in
+the course, a link `cathedra setup` makes, or the `typst/` directory of a
+cathedra submodule); a course only holds its content and its configuration:
 
 | Course path | What |
 |---|---|
-| `Makefile` | the options, then `include slide-app/makefile.mk` |
-| `slide-app` | a link to the engine's Typst files (`make setup` creates it): decks import `/slide-app/…` |
+| `Makefile` | the options, then `include cathedra/makefile.mk` |
+| `cathedra` | a link to the engine's Typst files (`make setup` creates it): decks import `/cathedra/…` |
 | `common/course.typ` | what every deck imports: the engine, the template configured for the course, the course notation |
 | `lectures/<id>.typ` or `lectures/<id>/<id>.typ` | a deck: title slide, sections, `#include` of modules, wrap-up (in a folder, with the files only it uses) |
 | `modules/<topic>/<topic>.typ` | the content, one topic per module, with its `figures/` |
 | `widgets/index.ts` | the course's React widgets (optional) |
-| `lib/` | generated: the bibliography and its links (`typst-slides sync`) |
+| `lib/` | generated: the bibliography and its links (`cathedra sync`) |
 | `out/` | generated: the web decks and PDFs |
 
 `common/`, `lectures/`, `modules/` and `widgets/` can instead live in a
 sub-directory, `SRC` (e.g. `src/`, the decks then importing
 `/src/common/course.typ`): the course directory stays Typst's root, with the
-`Makefile`, `lib/`, `.cache/` and `out/`. A course whose `slide-app` submodule
-is in its directory imports `/slide-app/typst/lib/slides.typ` and includes
-`slide-app/typst/makefile.mk` (no link).
+`Makefile`, `lib/`, `.cache/` and `out/`. A course whose `cathedra` submodule
+is in its directory imports `/cathedra/typst/lib/slides.typ` and includes
+`cathedra/typst/makefile.mk` (no link).
 
 | Engine path (repository) | What |
 |---|---|
-| `src/typst_slides/typst/lib/slides.typ` | the components and page markers (`typst/` is a link to `src/typst_slides/typst/`) |
-| `src/typst_slides/typst/templates/*.typ` | what a course looks like (`academic`) |
-| `src/typst_slides/typst/makefile.mk` | the make targets |
-| `src/typst_slides/typst/fonts/` | Font Awesome (TTF), given to every compilation |
-| `src/typst_slides/*.py` | the `typst-slides` command: build, dev server, site, PDFs, outline, tools |
-| `rust/` | the native module (`typst_slides._native`): Typst (compile, SVG pages, PDF, queries) |
-| `viewer/` | the browser viewer's sources (Reveal.js, SVG pages, widgets, structure browser, this help); built into `src/typst_slides/data/` |
+| `src/cathedra/typst/lib/slides.typ` | the components and page markers (`typst/` is a link to `src/cathedra/typst/`) |
+| `src/cathedra/typst/templates/*.typ` | what a course looks like (`academic`) |
+| `src/cathedra/typst/makefile.mk` | the make targets |
+| `src/cathedra/typst/fonts/` | Font Awesome (TTF), given to every compilation |
+| `src/cathedra/*.py` | the `cathedra` command: build, dev server, site, PDFs, outline, tools |
+| `rust/` | the native module (`cathedra._native`): Typst (compile, SVG pages, PDF, queries) |
+| `viewer/` | the browser viewer's sources (Reveal.js, SVG pages, widgets, structure browser, this help); built into `src/cathedra/data/` |
 | `tests/` | pytest: the engine, a made-up course; `tests/browser/`: the viewer, against a running `make serve` |
 | `docs/` | these pages |
 
@@ -93,7 +93,7 @@ pre-commit install               # ruff, cargo fmt/clippy, conventional commits,
                                  # the viewer bundle in step with viewer/
 ```
 
-The built viewer (`src/typst_slides/data/`) is committed, so that the package
+The built viewer (`src/cathedra/data/`) is committed, so that the package
 builds without Node; the pre-commit hook refuses a change of `viewer/`
 without the rebuilt bundle. Releases: a GitHub release publishes the wheels
 (Linux, macOS, Windows; abi3) and the sdist on PyPI
@@ -115,9 +115,9 @@ without the rebuilt bundle. Releases: a GitHub release publishes the wheels
 - [Interactive widgets](docs/widgets.md): React components in a slide
 - [The viewer](docs/viewer.md): keys, structure browser, live reload, editing
 - [Building and checking](docs/building.md): make targets and options, PDFs, outline,
-  compiling without typst-slides
+  compiling without cathedra
 - [Upgrading a course](docs/upgrading.md): API versions, `make migrate`;
   [CHANGELOG](CHANGELOG.md)
-- [Converting from MDX](docs/conversion.md): porting a slide-app module
+- [Converting from MDX](docs/conversion.md): porting a slide-app MDX module
 - [API index](docs/api.md): every function and value, with its signature
   (generated from the sources; in the help only)

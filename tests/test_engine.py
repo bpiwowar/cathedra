@@ -8,8 +8,8 @@ import struct
 import zlib
 from pathlib import Path
 
-from typst_slides.engine import DeckCompiler
-from typst_slides.paths import Course
+from cathedra.engine import DeckCompiler
+from cathedra.paths import Course
 
 
 def png(w: int = 2, h: int = 2) -> bytes:

@@ -3,7 +3,7 @@ requires = ["maturin>=1.7,<2"]
 build-backend = "maturin"
 
 [project]
-name = "typst-slides"
+name = "cathedra"
 version = "0.1.0"
 description = "Lecture slides in Typst (Touying): web decks with a Reveal.js viewer and live reload, printable PDFs, course sites"
 readme = "README.md"
@@ -36,23 +36,23 @@ dependencies = [
 [project.optional-dependencies]
 # headless Chromium: widget snapshots for the PDFs, viewer tests
 browser = ["playwright>=1.45"]
-# `typst-slides convert` (MDX -> Typst; also needs pandoc)
+# `cathedra convert` (MDX -> Typst; also needs pandoc)
 convert = ["json5>=0.9"]
 
 [project.scripts]
-typst-slides = "typst_slides.cli:main"
+cathedra = "cathedra.cli:main"
 
 [project.urls]
-Repository = "https://github.com/bpiwowar/typst-slides"
+Repository = "https://github.com/bpiwowar/cathedra"
 
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.6", "pre-commit>=3.7"]
 
 [tool.maturin]
-# mixed layout: the Python package in src/typst_slides, the extension
-# (rust/lib.rs) as typst_slides._native
+# mixed layout: the Python package in src/cathedra, the extension
+# (rust/lib.rs) as cathedra._native
 python-source = "src"
-module-name = "typst_slides._native"
+module-name = "cathedra._native"
 features = ["pyo3/extension-module"]
 exclude = ["viewer/node_modules/**"]
 
@@ -68,7 +68,7 @@ cache-keys = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["browser: needs Playwright and Chromium (typst-slides[browser])"]
+markers = ["browser: needs Playwright and Chromium (cathedra[browser])"]
 
 [tool.ruff]
 line-length = 88

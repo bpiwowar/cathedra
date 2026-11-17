@@ -33,7 +33,7 @@ type Section = { page: string; heading: string; anchor?: string; level: number; 
 // (markdown links keep their text: `[text](url)` -> `text`)
 const plainText = (s: string) => s.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/[`*]/g, "");
 // { "README.md": markdown, "docs/x.md": markdown, … }: docs.json next to the
-// deck (written by the dev builds of typst-slides), loaded when H opens
+// deck (written by the dev builds of cathedra), loaded when H opens
 let docs: Record<string, string> = {};
 let sections: Section[] = [];
 

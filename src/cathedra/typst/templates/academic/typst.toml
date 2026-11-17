@@ -1,0 +1,14 @@
+# The `academic` template of cathedra, as a Typst package (it is imported
+# by path for now: /cathedra/typst/templates/academic/academic.typ; see
+# docs/templates.md for the intended package scheme).
+[package]
+name = "cathedra-academic"
+version = "1.0.0"
+entrypoint = "academic.typ"
+authors = ["Benjamin Piwowarski"]
+license = "MIT"
+description = "A plain academic look for cathedra decks: title slide with artwork, section cards, footer page markers."
+
+[tool.cathedra]
+# the engine API versions it works with (lib/slides.typ `api-version`)
+api = ">=3, <5"

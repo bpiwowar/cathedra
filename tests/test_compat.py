@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import re
 
-from typst_slides.compat import api_problems, engine_api, satisfies
-from typst_slides.migrate import academic_package, course_data
-from typst_slides.paths import TYPST
+from cathedra.compat import api_problems, engine_api, satisfies
+from cathedra.migrate import academic_package, course_data
+from cathedra.paths import TYPST
 
 
 def test_api_version_matches():
@@ -24,11 +24,11 @@ def test_template_range(tmp_path):
     t = tmp_path / "tpl"
     t.mkdir()
     (t / "typst.toml").write_text(
-        '[package]\nname = "x"\nversion = "1.0.0"\n[tool.typst-slides]\napi = ">=1, <2"\n'
+        '[package]\nname = "x"\nversion = "1.0.0"\n[tool.cathedra]\napi = ">=1, <2"\n'
     )
     (t / "x.typ").write_text("")
     (problem,) = api_problems([t / "x.typ"])
-    assert "x 1.0.0 needs the typst-slides API >=1, <2" in problem
+    assert "x 1.0.0 needs the cathedra API >=1, <2" in problem
     academic = TYPST / "templates" / "academic" / "academic.typ"
     assert api_problems([academic]) == []
 

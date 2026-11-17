@@ -9,9 +9,9 @@ import subprocess
 
 import pytest
 
-from typst_slides import images, migrate, sync
-from typst_slides.engine import TYPST_VERSION, DeckCompiler
-from typst_slides.standalone import plain_problems
+from cathedra import images, migrate, sync
+from cathedra.engine import TYPST_VERSION, DeckCompiler
+from cathedra.standalone import plain_problems
 
 
 def test_plain_compile_reads_no_generated_file(course, course_dir):
@@ -33,7 +33,7 @@ def _git(d, *args):
 
 def test_check_flags_ignored_files(course, course_dir):
     _git(course_dir, "init", "-q")
-    (course_dir / ".gitignore").write_text("lib/\n.cache/\nslide-app\n")
+    (course_dir / ".gitignore").write_text("lib/\n.cache/\ncathedra\n")
     deck = course.deck_file("demo")
     assert plain_problems(course, deck) == []
     # a deck reading a generated file whatever the mode: a clone fails
@@ -62,7 +62,7 @@ def test_typst_cli_compiles_a_clone(course_dir):
             "--root",
             ".",
             "--font-path",
-            "slide-app/fonts",
+            "cathedra/fonts",
             "lectures/demo/demo.typ",
             "demo.pdf",
         ],
@@ -130,7 +130,7 @@ def test_migration_4(tmp_path, monkeypatch):
         skipped += sk
     assert "#let course-data = if generated {\n  (\n    ref-links" in s
     assert "  )\n} else { (:) }" in s
-    assert "image-cache" not in s and "Read only when typst-slides compiles" in s
+    assert "image-cache" not in s and "Read only when cathedra compiles" in s
     assert 'bibliography("/src/main.bib", style: bib-style' in s
     assert len(skipped) == 1 and "origin" in skipped[0][1]
     again = s

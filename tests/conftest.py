@@ -1,5 +1,5 @@
 """Fixtures: a small made-up course (tests/fixtures/course), copied into a
-temporary directory with its `slide-app` link to the engine."""
+temporary directory with its `cathedra` link to the engine."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from typst_slides.paths import TYPST, Course
+from cathedra.paths import TYPST, Course
 
 FIXTURE = Path(__file__).parent / "fixtures" / "course"
 
@@ -17,7 +17,7 @@ FIXTURE = Path(__file__).parent / "fixtures" / "course"
 def course_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     d = tmp_path / "course"
     shutil.copytree(FIXTURE, d)
-    (d / "slide-app").symlink_to(TYPST)
+    (d / "cathedra").symlink_to(TYPST)
     monkeypatch.chdir(d)
     monkeypatch.delenv("SLIDES_SRC", raising=False)
     monkeypatch.delenv("SLIDES_SCHEDULE", raising=False)
