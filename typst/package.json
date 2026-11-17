@@ -1,0 +1,21 @@
+{
+  "name": "slide-app-typst",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "markdown-it": "14.1.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "reveal.js": "5.2.1",
+    "reveal.js-plugins": "4.6.0"
+  },
+  "devDependencies": {
+    "@fortawesome/fontawesome-free": "7.3.1",
+    "@myriaddreamin/typst-ts-node-compiler": "0.8.0-rc3",
+    "@types/markdown-it": "14.1.2",
+    "esbuild": "0.25.5",
+    "js-yaml": "4.1.0",
+    "puppeteer-core": "24.10.0"
+  },
+  "description": "slide-app for Typst: Touying decks shown by a Reveal.js viewer"
+}

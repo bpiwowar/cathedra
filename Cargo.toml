@@ -1,0 +1,41 @@
+# The native part of typst-slides (typst_slides._native, built by maturin):
+# Typst (crates.io) compiling the decks, SVG pages with what the viewer
+# needs (text layer, internal links), PDF export, queries.
+[package]
+name = "typst-slides-native"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+publish = false
+
+[lib]
+name = "_native"
+path = "rust/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+comemo = "0.5"
+parking_lot = "0.12"
+pyo3 = { version = "0.25", features = ["abi3-py311"] }
+rayon = "1.10"
+serde_json = "1"
+typst = "=0.15.1"
+typst-kit = { version = "=0.15.1", features = ["embedded-fonts", "scan-fonts", "system-files", "system-downloader", "emit-diagnostics", "datetime"] }
+typst-pdf = "=0.15.1"
+typst-svg = "=0.15.1"
+typst-render = "=0.15.1"
+typst-eval = "=0.15.1"
+typst-layout = "=0.15.1"
+base64 = "0.22"
+termcolor = "1.4"
+
+[profile.release]
+lto = "thin"
+codegen-units = 4
+# macOS 27's dyld rejects a dylib run through `strip` by the Rust toolchain
+# ("mis-aligned LINKEDIT string pool"): keep the symbols
+strip = false
+
+[features]
+# OpenSSL built from source (Linux wheels: no system OpenSSL to link to)
+vendored-openssl = ["typst-kit/vendor-openssl"]

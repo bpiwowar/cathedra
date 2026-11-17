@@ -1,0 +1,13 @@
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+dist/
+build/
+.ruff_cache/
+.pytest_cache/
+*.egg-info/
+*.tgz
+target/
+src/typst_slides/*.so
+src/typst_slides/*.pyd

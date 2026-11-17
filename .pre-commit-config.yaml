@@ -1,0 +1,55 @@
+default_install_hook_types:
+  - pre-commit
+  - commit-msg
+
+# The built viewer is committed but generated: never let any hook touch it.
+exclude: ^src/typst_slides/data/
+
+repos:
+- hooks:
+  - id: check-yaml
+  - id: end-of-file-fixer
+  - id: trailing-whitespace
+  repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v6.0.0
+- hooks:
+  - id: python-check-blanket-noqa
+  - id: python-no-eval
+  repo: https://github.com/pre-commit/pygrep-hooks
+  rev: v1.10.0
+- hooks:
+  - id: no-fixme-todo
+    name: No FIXME or TODO markers
+    entry: '(FIXME:|TODO:)'
+    language: pygrep
+    types: [python]
+  - id: viewer-build-sync
+    name: Viewer build in sync with viewer/
+    entry: scripts/check-viewer-build.sh
+    language: script
+    pass_filenames: false
+    always_run: true
+  - id: cargo-fmt
+    name: cargo fmt
+    entry: cargo fmt --
+    language: system
+    types: [rust]
+  - id: cargo-clippy
+    name: cargo clippy
+    entry: cargo clippy --release --all-targets -- -D warnings
+    language: system
+    types: [rust]
+    pass_filenames: false
+  repo: local
+- hooks:
+  - id: ruff-check
+    args: [--fix]
+  - id: ruff-format
+  repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.17.1
+- hooks:
+  - id: conventional-pre-commit
+    stages:
+    - commit-msg
+  repo: https://github.com/compilerla/conventional-pre-commit
+  rev: v4.4.0

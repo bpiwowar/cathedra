@@ -1,0 +1,8 @@
+# Plain `cargo build` / `cargo clippy` of the Python extension on macOS: the
+# Python symbols are resolved when the module is loaded (maturin does this
+# by itself).
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
