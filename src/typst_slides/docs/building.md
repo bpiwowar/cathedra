@@ -12,7 +12,7 @@ section with an exported `HELP_PROJECT` define: a title line, then
 | `make html` | the web decks, `out/<deck>/`: the pages as SVG (`svg/`, `svg.json`), the slide structure, the viewer (see [the viewer](viewer.md#how-the-pages-are-shown)) |
 | `make pdf` | printable PDFs, `out/<deck>.pdf`, one page per step |
 | `make handout` | handouts, `out/<deck>-handout.pdf`: one page per slide, its last step |
-| `make check` | compile every deck; fail on errors and on slides that overflow |
+| `make check` | compile every deck; fail on errors, on slides that overflow, and when plain `typst compile` could not compile a deck from a clone (see [below](#without-typst-slides)) |
 | `make outline` | deck structure, slide counts, time vs the `target` of `course.yaml` |
 | `make outline-slides` | the same, with every slide and its `file:line` |
 | `make duplicates` | the files `#include`d more than once, by one deck or across decks, with where |
@@ -155,3 +155,46 @@ another with `academic(aspect-ratio: "16-10")`, a deck with
 typst compile --root . --font-path slide-app/fonts lectures/lecture-1.typ out.pdf \
   --input todo=0      # no work-in-progress notes (the typst CLI, if installed)
 ```
+
+## Without typst-slides
+
+A course does not depend on typst-slides being maintained: a clone of it
+compiles to PDF with plain `typst compile`, and its authors can stop using
+the tool at any time. Typst does all of the typesetting, and the engine's
+Typst world is the typst CLI's (the same packages, from Typst Universe, and
+the fonts built into Typst, plus the engine's `fonts/`). What the tool adds
+is the web version (the viewer, the live widgets), the course site, and
+generated files that only improve the PDFs:
+
+| Generated (gitignored) | Without it |
+|---|---|
+| `lib/refs-links.json` (`make setup`) | the icon of `#reference` has no link |
+| `.cache/widgets/` (`make snapshots`) | a widget shows its `fallback`, or a dashed frame |
+
+The course reads them only when typst-slides compiles (`generated` in
+`lib/slides.typ`, set by `--input typst-slides=1`): the files git keeps are
+enough for the rest. In particular:
+
+- the decks cite the course's `.bib` itself, with the engine's style
+  (`bib-style`): see [citations](citations.md) (a duplicate key fails);
+- an image fetched by `make images` is written to its path, a file of the
+  course to commit: see [images](images.md#fetched-images).
+
+```bash
+git clone --recurse-submodules <course> && cd <course>
+typst compile --root . --font-path slide-app/typst/fonts \
+  src/lectures/lecture-1/lecture-1.typ lecture-1.pdf
+```
+
+(`--input handout=1` for the handout.) The engine comes with the course: a
+`slide-app` submodule, or a copy of the package's `typst/` directory in
+place of the `slide-app` link; once it is published on Typst Universe, the
+decks import it as a package.
+
+**Kept that way by `make check`:** besides the normal compilation, it
+compiles every deck as plain typst does (no `typst-slides` input) and fails
+when that compilation fails, or reads a file that git ignores and does not
+track (a clone would not have it). Whatever adds such a dependency, a
+migration, a tool or a hand edit, is caught there, not on the day the tool
+is gone. The engine's tests also compile a made-up course with the typst CLI
+(when installed), without its generated files.

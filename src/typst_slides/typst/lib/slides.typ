@@ -15,7 +15,7 @@
 
 // The engine's API version (VERSION, docs/upgrading.md): templates check it
 // (`assert-api`).
-#let api-version = 3
+#let api-version = 4
 
 // Fails, saying so, when the engine's API version is not in
 // [`min`, `before`): a template (or a course) states the versions it works
@@ -31,19 +31,29 @@
 // What the course's tools generate, given by the course (its
 // common/course.typ reads the files and passes them to the template, e.g.
 // `academic(data: …)`, which calls `course-setup` at the start of each deck);
-// the engine reads no course file itself:
+// the engine reads no course file itself. All of it is optional: the course
+// reads these (gitignored) files only when typst-slides compiles
+// (`generated`, below), so that plain `typst compile` works from a clone.
 // - ref-links: bib key -> {zotero, doi, url}, the links of `#reference`
 //   (lib/refs-links.json, `typst-slides sync`)
-// - image-cache: source -> "/.cache/images/<file>", the images fetched at
-//   build time (.cache/images/manifest.json, `typst-slides images`)
 // - widget-shots: slot key -> "/.cache/widgets/<hash>.png", the widgets'
 //   pictures for print (.cache/widgets/manifest.json, `typst-slides snapshots`)
-#let course-data = state("typst-slides-course-data", (ref-links: (:), image-cache: (:), widget-shots: (:)))
-#let course-setup(ref-links: (:), image-cache: (:), widget-shots: (:)) = course-data.update((
+// (`image-cache`, API 3, is accepted and ignored: fetched images are files of
+// the course since API 4, docs/images.md)
+#let course-data = state("typst-slides-course-data", (ref-links: (:), widget-shots: (:)))
+#let course-setup(ref-links: (:), image-cache: none, widget-shots: (:)) = course-data.update((
   ref-links: ref-links,
-  image-cache: image-cache,
   widget-shots: widget-shots,
 ))
+
+// Whether typst-slides compiles this (`--input typst-slides=1`): the
+// course's generated files are then there to read. Plain `typst compile`
+// (and an editor not set up for the course) leaves it false.
+#let generated = sys.inputs.at("typst-slides", default: "0") == "1"
+
+// The engine's citation style (CSL, as bytes): `#bibliography("/main.bib",
+// style: bib-style)`.
+#let bib-style = read("../csl/normal.csl", encoding: none)
 
 #let primary = rgb("#252955")
 #let accent = rgb("#2933aa")
@@ -732,24 +742,12 @@
 // - origin: where the image comes from (a URL), a link in the dev server
 // - caption: content under the image (`<figcaption>`; text, links, maths,
 //   citations…): small, centred with the image, not numbered: `#img(path("x.webp"), caption: [Image space])`
-// Images fetched at build time (`typst-slides images`, `make images`): the
-// course data's `image-cache`, { "<source>": "/.cache/images/<file>" }. The
-// source is the path of a file that is missing (`path("images/x.webp")`, with
-// an `origin:` to fetch it from) or a URL given as the first argument. In a
-// `context`.
-#let cached-image(src) = {
-  let image-cache = course-data.get().image-cache
-  let key = if type(src) == str { src } else if type(src) == bytes { none } else {
-    let m = repr(src).match(regex("^path\\(\"(.*)\"\\)$"))
-    if m == none { none } else { m.captures.first() }
-  }
-  if key != none and key in image-cache { image-cache.at(key) } else { src }
-}
-
-// `filename` / `resize` are read by `typst-slides images` (the name and the
-// size cap of the fetched copy); `#img` itself ignores them.
+// An image given by `origin:` and missing (`path("images/x.webp")`) is
+// fetched by `typst-slides images` into that file, a file of the course
+// (commit it). In a `context`.
+// `resize` is read by `typst-slides images` (the size cap of the fetched
+// copy), `filename` is ignored (API 3); `#img` itself ignores both.
 #let img(path, width: auto, height: auto, vh: none, vw: none, zoom: 1, center: false, origin: none, filename: none, resize: none) = context {
-  let path = cached-image(path)
   // `vh` alone (no `vw` / `width`) or `vw` alone (no `vh` / `height`): that
   // size, the other side following the image's proportions, and the whole
   // image scaled down if it is wider than the space available (never cropped)

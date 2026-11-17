@@ -93,7 +93,7 @@ ZIP_OUT         ?= $(DESTDIR).zip
 COURSE_PORT     ?= 9010
 
 TS       := $(TYPST_SLIDES)
-GEN      := lib/refs.bib lib/refs-links.json slide-app
+GEN      := lib/refs-links.json slide-app
 
 .PHONY: help update-makefile check-makefile unused-media optimize-images compute-svg-bb install-vscode open-slide images check-images setup outline outline-slides duplicates serve html build snapshots pdf handout check format convert space live-test clean migrate check-version
 
@@ -130,8 +130,8 @@ Check
   live-test       browser checks of the viewer (typst-slides[browser], pytest)
 
 Images and media
-  images          fetch the images given by URL / origin (Zotero) into .cache/images,
-                  downsampled
+  images          fetch the missing images given by an origin (URL, Zotero) to
+                  their path (commit them), downsampled
   check-images    list the heavy images of the course (> 1 MB or > 2400 px)
   optimize-images  PNG/JPEG/GIF -> WebP, capped in size, references rewritten
                   (DRY=1, PRUNE=1)
@@ -194,7 +194,7 @@ check-version:
 	  [ "$$have" -ge "$$want" ] || echo "warning: the course is at slide-app API $$have, the engine at $$want: run 'make migrate DRY=1' then 'make migrate' (docs/upgrading.md)" >&2
 
 migrate:
-	@$(TS) migrate $(if $(DRY),--dry-run)
+	@SLIDES_BIB=$(BIB) $(TS) migrate $(if $(DRY),--dry-run)
 
 # the engine, as the decks import it (/slide-app/lib/slides.typ: a link to
 # the package's Typst files); a course with slide-app as a submodule in its
@@ -205,8 +205,9 @@ slide-app:
 setup:
 	$(TS) setup $(BIB)
 
-# the bibliography and its links, refreshed when the bib changes
-lib/refs.bib lib/refs-links.json: $(BIB)
+# the links of the references, refreshed when the bib changes (fails on a
+# duplicate key)
+lib/refs-links.json: $(BIB)
 	$(TS) sync $(BIB)
 
 outline: $(GEN)
@@ -230,9 +231,9 @@ html build: $(GEN) images check-version
 snapshots: $(GEN)
 	@$(TS) snapshots $(foreach d,$(DECKS),$(call deck-file,$(d))) || echo "snapshots failed: the PDFs show the widgets' fallbacks"
 
-# Images fetched at build time (#img with a URL, or an origin and no file):
-# downloaded and shrunk into .cache/images, listed in its manifest, which the
-# compilations get as `img-cache` (sys.inputs). See docs/images.md.
+# Images given by an origin and missing (#img(path("x.webp"), origin: …)):
+# downloaded (.cache/images/raw), shrunk and written to their path, files of
+# the course to commit. See docs/images.md.
 images:
 	@$(TS) images || echo "images: some images could not be fetched"
 
@@ -251,8 +252,8 @@ check: $(GEN)
 
 convert: $(GEN)
 	@test -n "$(MODULE)$(LECTURE)" || { echo "usage: make convert MODULE=<topic>[/<file>] | LECTURE=<id>"; exit 2; }
-	$(if $(MODULE),$(TS) convert --src $(MDX_SRC) --macros $(MDX_MACROS) $(if $(MDX_BACKUP),--backup $(MDX_BACKUP)) $(MODULE))
-	$(if $(LECTURE),$(TS) convert --deck --src $(MDX_LECTURES) --macros $(MDX_MACROS) $(if $(MDX_BACKUP),--backup $(MDX_BACKUP)) $(LECTURE))
+	$(if $(MODULE),SLIDES_BIB=$(BIB) $(TS) convert --src $(MDX_SRC) --macros $(MDX_MACROS) $(if $(MDX_BACKUP),--backup $(MDX_BACKUP)) $(MODULE))
+	$(if $(LECTURE),SLIDES_BIB=$(BIB) $(TS) convert --deck --src $(MDX_LECTURES) --macros $(MDX_MACROS) $(if $(MDX_BACKUP),--backup $(MDX_BACKUP)) $(LECTURE))
 
 format:
 	@command -v typstyle >/dev/null || { echo "format: needs typstyle (brew install typstyle)"; exit 2; }
@@ -361,4 +362,4 @@ serve-dev: $(GEN) | practical-manifest
 	$(SITE) serve --dev --port=$(COURSE_PORT) --sockets=$(OUT) $(SITE_FLAGS) --static=$(DESTDIR_DEV) --static=$(DESTDIR)
 
 clean:
-	rm -rf $(OUT) .cache/widgets .cache/images
+	rm -rf $(OUT) .cache/widgets .cache/images/raw

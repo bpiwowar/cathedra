@@ -11,4 +11,4 @@ description = "A plain academic look for typst-slides decks: title slide with ar
 
 [tool.typst-slides]
 # the engine API versions it works with (lib/slides.typ `api-version`)
-api = ">=3, <4"
+api = ">=3, <5"

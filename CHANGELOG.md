@@ -6,7 +6,41 @@ to in `.slide-app-version` (missing = 1); `make migrate` brings it up to date
 (see [docs/upgrading.md](docs/upgrading.md)). The format follows
 [Keep a Changelog](https://keepachangelog.com/).
 
-## API 3 (typst-slides 0.1.0)
+## API 4 (typst-slides 0.1.0)
+
+A clone of a course compiles with plain `typst compile`: nothing it needs is
+generated and gitignored (docs/building.md, "Without typst-slides").
+
+### Changed
+
+- The course's generated data is read only when typst-slides compiles:
+  `generated` (lib/slides.typ) is true with `--input typst-slides=1`, which
+  every typst-slides compilation passes; `common/course.typ` reads
+  `if generated { (…json(…)…) } else { (:) }`. Without it: no link on the
+  references' icon, the widgets' fallbacks.
+- The decks cite the course's `.bib` itself, with the engine's style:
+  `bibliography("/src/main.bib", style: bib-style)`. `typst-slides sync`
+  only writes `lib/refs-links.json`, and fails on a duplicate key (listed,
+  with its lines) instead of writing a deduplicated `lib/refs.bib`; fix
+  duplicates in Zotero. `lib/refs.bib` and `lib/refs.csl` are no longer
+  written.
+- `make images` writes a fetched image to its `path(…)`, a file of the course
+  to commit (format from its extension), instead of `.cache/images/` and a
+  manifest. `#img("https://…")` (a URL as the image) and `filename:` are
+  gone: give `path(…)` and `origin:`.
+- `make check` also compiles each deck as plain typst does, and fails when
+  that fails or reads a file git ignores and does not track.
+
+### Migration
+
+`make migrate` (it passes the Makefile's `BIB` as `SLIDES_BIB`):
+`course-data` gated by `generated` (its `image-cache` line removed),
+`style: "/lib/refs.csl"` -> `style: bib-style`, `"/lib/refs.bib"` -> the
+course's `.bib`. Reported, by hand: `#img("https://…")` (download the image,
+or give `path(…)` and `origin:`, then `make images` and commit it). Then
+`make setup`: it fails on duplicate keys until they are fixed in Zotero.
+
+## API 3
 
 ### Added
 

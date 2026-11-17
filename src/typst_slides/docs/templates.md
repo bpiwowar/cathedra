@@ -33,7 +33,7 @@ every slide the main section › sub-section above and the slide number below.
 | `list-spacing` | `0.9em` | space between the items of a list (`-`) or an enumeration (`+`); `0.65em` is Typst's (the line spacing). A slide can set its own: `#set list(spacing: 0.6em)` |
 | `lang` | `"en"` | hyphenation, quotes, the viewer's language (`"fr"`, `"en"`), the title of the "in detail" appendix |
 | `details-title` | `auto` | the title of the ["in detail"](details.md) appendix (*In detail*, *Compléments* in French) |
-| `data` | `(:)` | the course's generated data (`ref-links`, `image-cache`, `widget-shots`), read by `common/course.typ` (see [course](course.md#commoncoursetyp)) |
+| `data` | `(:)` | the course's generated data (`ref-links`, `widget-shots`), read by `common/course.typ` when typst-slides compiles (see [course](course.md#commoncoursetyp)) |
 
 The artwork is drawn at the slide height; with content in its corners only,
 its left half is anchored left and its right half right, so that a 4:3

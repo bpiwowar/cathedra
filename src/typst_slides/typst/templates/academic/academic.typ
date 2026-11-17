@@ -15,7 +15,7 @@
 
 // The engine API this template is written for (typst.toml,
 // [tool.typst-slides] api): checked when a deck compiles.
-#assert-api(3, 4, who: "slides-academic 1.0.0")
+#assert-api(3, 5, who: "slides-academic 1.0.0")
 
 // The slide title, as shown above a slide.
 #let title-block(t) = block(below: 0.8em, text(size: 1.25em, weight: "bold", fill: primary, t))
@@ -84,9 +84,10 @@
 //   (`annot-config` in lib/slides.typ), e.g. `(handout: "none")`
 // - details-title: the title of the "in detail" appendix (`#details`); auto:
 //   "In detail", "Compléments" when `lang` is "fr"
-// - data: the course's generated data, read by its common/course.typ:
-//   `(ref-links: json("/lib/refs-links.json"), image-cache: …, widget-shots:
-//   …)` (see `course-setup` in lib/slides.typ); none of it is required
+// - data: the course's generated data, read by its common/course.typ when
+//   typst-slides compiles (`generated`): `(ref-links: json("/lib/refs-links.json"),
+//   widget-shots: …)` (see `course-setup` in lib/slides.typ); none of it is
+//   required
 #let academic(
   course: none,
   background: none,

@@ -112,12 +112,20 @@ class DeckCompiler:
     """A warm compiler for one deck (`deck`: its .typ file)."""
 
     def __init__(
-        self, course: Course, deck: Path, inputs: dict[str, str] | None = None
+        self,
+        course: Course,
+        deck: Path,
+        inputs: dict[str, str] | None = None,
+        plain: bool = False,
     ):
+        """`plain`: as plain `typst compile` would, without the course's
+        generated files (no `typst-slides` input: lib/slides.typ `generated`)."""
         self.course = course
         self.deck = Path(deck)
         self.inputs = dict(inputs or {})
-        course.ensure_data()
+        if not plain:
+            self.inputs.setdefault("typst-slides", "1")
+            course.ensure_data()
         self._compiler = _native.Compiler(
             str(course.root), str(self.deck), [str(FONTS)], self.inputs
         )

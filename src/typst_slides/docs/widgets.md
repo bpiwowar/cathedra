@@ -103,8 +103,8 @@ export function Embeddings({ url, onReady }: { url: string; onReady: () => void 
 - `WIDGET_SCALE` (default 3) sets the picture's pixels per pt.
 - The pictures are listed in `.cache/widgets/manifest.json`, which the
   course's `common/course.typ` reads and gives to the template
-  (`widget-shots`): any compilation of the deck (a plain `typst compile`
-  too) shows them.
+  (`widget-shots`) when typst-slides compiles. A plain `typst compile` shows
+  the fallbacks (or the dashed frame).
 
 A widget can stand in for a figure drawn in steps, keeping the figure for the
 PDF:

@@ -78,12 +78,11 @@ class Course:
         """A path as Typst sees it: from the root, with a leading /."""
         return "/" + Path(os.path.relpath(path, self.root)).as_posix()
 
-    # the generated data the course's common/course.typ reads (`course-setup`
-    # in lib/slides.typ): written empty when missing, so that a deck compiles
-    # before the tools ran (and in an editor)
+    # the generated data the course's common/course.typ reads when
+    # typst-slides compiles (`course-setup`, `generated` in lib/slides.typ):
+    # written empty when missing, so that a deck compiles before the tools ran
     DATA_FILES = (
         "lib/refs-links.json",
-        ".cache/images/manifest.json",
         ".cache/widgets/manifest.json",
     )
 

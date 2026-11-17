@@ -105,35 +105,35 @@ slide: see [figures](figures.md). Live web components: see
 
 ## Fetched images
 
-An image can be fetched at build time instead of being committed:
+An image can be fetched from where it comes from, once, instead of being
+copied by hand:
 
 ```typst
-#img("https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png", vh: 40%)
 #img(path("images/entity-lens.webp"), origin: "zotero://open-pdf/library/items/ABC?page=3&annotation=XYZ", resize: "800x")
-#img("https://…/x.png", filename: "x-plot")
+#img(path("images/png-demo.webp"), origin: "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png", vh: 40%)
 ```
 
-- an `http(s)://` / `zotero://` string as first argument is the source;
-- with `path("…")`, the source is `origin:`, used only when the file does not
-  exist (a committed file is used as it is, `origin` stays a link in the dev
-  server). A Zotero origin needs `annotation=`; the picture is the one Zotero
-  rendered, `~/Zotero/cache/library/<annotation>.png` (open the annotation in
-  Zotero once). It is never fetched when the library is not there: the
-  image then fails to load, with a warning from `make images`.
+- when the file of `path("…")` does not exist, `make images` fetches
+  `origin:` into it; once it exists, it is used as it is (`origin` stays a
+  link in the dev server). A Zotero origin needs `annotation=`; the picture
+  is the one Zotero rendered, `~/Zotero/cache/library/<annotation>.png` (open
+  the annotation in Zotero once). It is never fetched when the library is
+  not there: `make images` then fails for that image.
 - **resize**: `"800x"` (max width), `"x300"` (max height) or `"500x210"`, in
   pixels. Without it the cap is the slot: `vh: 50%` is 50% of 700 px,
   `vw` likewise (1244 px), else 1920 x 1400, times `IMG_SCALE` (default 2).
   Images are never enlarged.
-- **filename**: the name of the cached file (`.cache/images/<filename>.webp`);
-  by default a hash of the source and the cap.
 
-`make images` (run by `serve`, `html`, `pdf` and `handout`) does it:
-downloads once into `.cache/images/raw/`, shrinks (Pillow), writes WebP
-(SVG kept as it is) into `.cache/images/` and lists them in
-`.cache/images/manifest.json`, which the course's `common/course.typ` reads
-and gives to the template (`image-cache`, see [course](course.md#commoncoursetyp)). `.cache/` is
-gitignored, so the sources stay free of the files; a build needs the network
-(or Zotero) once.
+`make images` (run by `serve`, `html`, `pdf` and `handout`) downloads once
+into `.cache/images/raw/` (gitignored), shrinks (Pillow) and writes the
+file in the format of its extension (`.webp`: lossy WebP; an SVG is copied).
+**Commit the file**: it is a file of the course like any other, and Typst
+fetches nothing, so a clone compiles with plain `typst compile`
+([building](building.md#without-typst-slides)). A file read but ignored by
+git makes `make check` fail.
+
+An `http(s)://` string as the image itself, `#img("https://…")`, is not
+supported (API 4): Typst cannot load it; give the file and its origin.
 
 Only fetched images are shrunk. `make check-images` lists the images of the
 course that are heavy (> 1 MB or wider/taller than 2400 px), which end up at

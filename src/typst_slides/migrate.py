@@ -308,6 +308,72 @@ def course_data(s: str, path: Path):
     return s, 1, []
 
 
+# ---------------------------------------------------------------- level 4
+# Plain `typst compile` works from a clone: the generated files (gitignored)
+# are read only when typst-slides compiles, the decks cite the course's .bib
+# with the engine's style, fetched images are files of the course.
+
+OLD_DATA_COMMENT = """// The course's generated data (typst-slides writes these files), given to
+// the template: the reference links, the fetched images, the widgets'
+// pictures (see `course-setup` in lib/slides.typ)
+"""
+DATA_COMMENT = """// The course's generated data (typst-slides writes these files, gitignored),
+// given to the template: the reference links, the widgets' pictures (see
+// `course-setup` in lib/slides.typ). Read only when typst-slides compiles
+// (`generated`): plain `typst compile` works from a clone, without them
+"""
+
+
+@safe
+def generated_data(s: str, path: Path):
+    """`#let course-data = (…json(…)…)` -> `if generated { (…) } else { (:) }`,
+    without `image-cache` (fetched images are files of the course)."""
+    m = re.search(r"#let\s+course-data\s*=\s*\(", s)
+    if not m or "json(" not in s[m.end() : m.end() + 2000]:
+        return s, 0, []
+    close = match(s, m.end() - 1)
+    inner = s[m.end() : close]
+    inner = re.sub(r"(?m)^[ \t]*image-cache\s*:[^\n]*\n", "", inner)
+    body = "#let course-data = if generated { (" + inner + ") } else { (:) }"
+    s = s[: m.start()] + body + s[close + 1 :]
+    s = s.replace(OLD_DATA_COMMENT, DATA_COMMENT)
+    return s, 1, []
+
+
+@safe
+def bib_style(s: str, path: Path):
+    """`style: "/lib/refs.csl"` (a copy) -> `style: bib-style` (the engine's)"""
+    return re.subn(r'style\s*:\s*"/lib/refs\.csl"', "style: bib-style", s) + ([],)
+
+
+@safe
+def bib_source(s: str, path: Path):
+    """`"/lib/refs.bib"` (a deduplicated copy) -> the course's .bib ($SLIDES_BIB,
+    the Makefile's BIB, relative to the course directory)"""
+    bib = os.environ.get("SLIDES_BIB")
+    found = [m.start() for m in re.finditer(r'"/lib/refs\.bib"', s)]
+    if not found:
+        return s, 0, []
+    if not bib:
+        return s, 0, [(i, '"/lib/refs.bib": give the course\'s .bib') for i in found]
+    rooted = "/" + Path(bib).as_posix().lstrip("./").lstrip("/")
+    return s.replace('"/lib/refs.bib"', f'"{rooted}"'), len(found), []
+
+
+@safe
+def url_images(s: str, path: Path):
+    """`#img("https://…")`: no longer fetched (reported, not rewritten)"""
+    skipped = [
+        (
+            m.start(),
+            '#img("https://…"): give the file and its origin, '
+            '#img(path("images/x.webp"), origin: "https://…"), then make images',
+        )
+        for m in re.finditer(r'(?<![\w-])img\(\s*"(https?|zotero)://', s)
+    ]
+    return s, 0, skipped
+
+
 # ------------------------------------------------------------ the registry
 # {to_version: [(name, function(text, path) -> (text, count, skipped))]}
 MIGRATIONS = {
@@ -320,6 +386,12 @@ MIGRATIONS = {
     3: [
         ("templates/academic.typ -> templates/academic/", academic_package),
         ("course data given to the template", course_data),
+    ],
+    4: [
+        ("generated data read only by typst-slides", generated_data),
+        ("the engine's citation style", bib_style),
+        ("the course's .bib", bib_source),
+        ("images given by a URL", url_images),
     ],
 }
 

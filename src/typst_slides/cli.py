@@ -104,10 +104,11 @@ def sync(
         Path, typer.Argument(help="the Zotero / Better BibTeX bibliography")
     ],
 ) -> None:
-    """lib/refs.bib (deduplicated), lib/refs-links.json, lib/refs.csl."""
+    """lib/refs-links.json (the links of #reference); fails on a duplicate key."""
     from .sync import main
 
-    main(str(bib))
+    if main(str(bib)):
+        raise typer.Exit(1)
 
 
 @app.command()
@@ -210,8 +211,10 @@ def check(
     jobs: Annotated[int, typer.Option("--jobs", "-j")] = 0,
 ) -> None:
     """Compile every deck (OUT/<deck>.pdf); fail on errors or overflowing slides
-    (Touying reports a slide past the canvas as a warning)."""
+    (Touying reports a slide past the canvas as a warning), and when plain
+    `typst compile` could not compile it from a clone (docs/building.md)."""
     from .engine import DeckCompiler
+    from .standalone import plain_problems
 
     c = course()
     out.mkdir(parents=True, exist_ok=True)
@@ -221,12 +224,17 @@ def check(
         comp = DeckCompiler(c, f).compile()
         if comp.ok:
             (out / f"{f.stem}.pdf").write_bytes(comp.pdf())
-        return comp
+        return comp, plain_problems(c, f)
 
     t0 = time.perf_counter()
     with ThreadPoolExecutor(jobs or min(8, os.cpu_count() or 4)) as ex:
-        results = list(ex.map(one, files))
+        pairs = list(ex.map(one, files))
+    results = [comp for comp, _ in pairs]
     status = 0
+    for _, problems in pairs:
+        for problem in problems:
+            print(f"error: {problem}")
+            status = 1
     from .compat import api_problems
 
     deps = sorted({p for comp in results for p in comp.dependencies})
@@ -245,7 +253,9 @@ def check(
                 status = 1
     took = time.perf_counter() - t0
     if status == 0:
-        print(f"check: all decks compile, no overflow ({took:.1f} s)")
+        print(
+            f"check: all decks compile (also as plain typst), no overflow ({took:.1f} s)"
+        )
     else:
         print(f"check: FAILED ({took:.1f} s)")
     raise typer.Exit(status)
@@ -384,7 +394,7 @@ def _passthrough(name: str, module: str, doc: str) -> None:
 _passthrough(
     "images",
     "images",
-    "Fetch the images given by URL / origin into .cache/images (--check: heavy images).",
+    "Fetch the missing images given by an origin, to their path (--check: heavy images).",
 )
 _passthrough(
     "unused-media",

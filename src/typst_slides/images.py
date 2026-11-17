@@ -4,24 +4,22 @@
     python -m typst_slides.images            (from the course; `make images`)
     python -m typst_slides.images --check    (`make check-images`)
 
-Fetch: every `#img(…)` call of the course's .typ files whose source is
+Fetch: every `#img(path("images/x.webp"), origin: "…")` call of the
+course's .typ files whose file is missing: the origin (a URL, or a Zotero
+annotation: the picture Zotero rendered,
+~/Zotero/cache/library/<annotation>.png) is fetched once into
+.cache/images/raw/, shrunk to a size cap and written to the path, in the
+format of its extension (WebP: lossy; an SVG is copied). The file is then a
+file of the course: commit it, so that plain `typst compile` works from a
+clone (Typst itself fetches nothing). A file that exists is used as it is;
+the origin is then only a link.
 
-- a URL: `#img("https://…/x.png")`,
-- a missing file with an origin:
-  `#img(path("images/x.webp"), origin: "zotero://…")` (a file that exists is
-  used as it is; the origin is then only a link),
-
-is fetched once into .cache/images/raw/ (a Zotero annotation: the picture
-Zotero rendered, ~/Zotero/cache/library/<annotation>.png; http(s): a
-download), shrunk to a size cap, written as WebP into .cache/images/, and
-listed in .cache/images/manifest.json: { "<source>": "/.cache/images/<file>" }.
-The course's common/course.typ reads it (`image-cache`, docs/images.md)
-(lib/slides.typ, `#img`).
+`#img("https://…")` (a URL as the image, API 3) is no longer fetched: an
+error, saying to give a path and an origin.
 
 Options of the call read here:
 
 - resize: "800x" | "x300" | "500x210"   max width / height in pixels
-- filename: "entity-lens"               name of the cached file (default: a hash)
 
 Without `resize`, the cap is the slot: `vh: 50%` -> 50% of 700 px, `vw`
 likewise (of 1244 px), else 1920 x 1400; times IMG_SCALE (default 2, the
@@ -36,7 +34,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import json
 import math
 import os
 import re
@@ -178,7 +175,6 @@ class ImgCall:
     file: Path
     key: str
     origin: str | None = None
-    filename: str | None = None
     resize: str | None = None
     vh: float | None = None
     vw: float | None = None
@@ -220,7 +216,6 @@ def img_calls(course: Course, file: Path) -> list[ImgCall]:
                 file,
                 key,
                 origin=string_value(named.get("origin")),
-                filename=string_value(named.get("filename")),
                 resize=string_value(named.get("resize")),
                 vh=_pct(named.get("vh")),
                 vw=_pct(named.get("vw")),
@@ -317,61 +312,88 @@ def _has_alpha(img: Image.Image) -> bool:
     return img.mode in ("RGBA", "LA", "PA") or "transparency" in img.info
 
 
-def produce(course: Course, key: str, calls: list[ImgCall], cache: Path) -> Path:
-    c = calls[0]
-    url = key if URL_RE.match(key) else c.origin
-    raw = fetch_raw(url or "", cache / "raw")
-    ext = raw.suffix
-    w, h = cap(c)
-    # a name that changes with the content (the cap, a changed source file)
-    stem = c.filename or sha(f"{key}|{_js(w)}x{_js(h)}")
-    copy = ext in (".svg", ".dat")
-    out = cache / (stem + (ext if copy else ".webp"))
-    if out.exists() and out.stat().st_mtime >= raw.stat().st_mtime and not c.filename:
-        return out
-    if copy:
-        shutil.copyfile(raw, out)
+def write_image(raw: Path, dest: Path, w: int | None, h: int | None) -> None:
+    """`raw` shrunk to fit in w x h (never enlarged), as `dest`'s format."""
+    if dest.suffix.lower() == ".svg" or raw.suffix.lower() in (".svg", ".dat"):
+        if raw.suffix.lower() != dest.suffix.lower():
+            raise ValueError(f"the origin is {raw.suffix}, cannot write {dest.suffix}")
+        shutil.copyfile(raw, dest)
+    elif dest.suffix.lower() == ".webp":
+        to_webp(raw, dest, w, h)
     else:
-        to_webp(raw, out, w, h)
-    return out
+        with Image.open(raw) as img:
+            img.seek(0)
+            scale = min(
+                w / img.width if w else math.inf, h / img.height if h else math.inf, 1
+            )
+            frame = img.copy()
+            if scale < 1:
+                frame = frame.resize(
+                    (
+                        max(1, js_round(img.width * scale)),
+                        max(1, js_round(img.height * scale)),
+                    ),
+                    Image.Resampling.LANCZOS,
+                )
+            if dest.suffix.lower() in (".jpg", ".jpeg") and frame.mode != "RGB":
+                frame = frame.convert("RGB")
+            frame.save(dest)
 
 
-def wanted_images(course: Course) -> dict[str, list[ImgCall]]:
-    """Source key -> its calls, for the images to fetch."""
+def produce(course: Course, key: str, calls: list[ImgCall], raw_dir: Path) -> Path:
+    c = calls[0]
+    raw = fetch_raw(c.origin or "", raw_dir)
+    dest = course.root / key.lstrip("/")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    w, h = cap(c)
+    write_image(raw, dest, w, h)
+    return dest
+
+
+def wanted_images(course: Course) -> tuple[dict[str, list[ImgCall]], list[ImgCall]]:
+    """Path -> its calls, for the images to fetch; and the calls given a URL
+    as the image (no longer supported)."""
     wanted: dict[str, list[ImgCall]] = {}
+    urls: list[ImgCall] = []
     for f in typ_files(course):
         for c in img_calls(course, f):
-            if not URL_RE.match(c.key):
-                if not c.origin or not URL_RE.match(c.origin):
-                    continue
-                if (course.root / c.key.lstrip("/")).exists():
-                    continue  # the file is there
+            if URL_RE.match(c.key):
+                urls.append(c)
+                continue
+            if not c.origin or not URL_RE.match(c.origin):
+                continue
+            if (course.root / c.key.lstrip("/")).exists():
+                continue  # the file is there
             wanted.setdefault(c.key, []).append(c)
-    return wanted
+    return wanted, urls
 
 
 def fetch_all(course: Course) -> int:
-    cache = course.root / ".cache" / "images"
-    wanted = wanted_images(course)
-    (cache / "raw").mkdir(parents=True, exist_ok=True)
-    manifest: dict[str, str] = {}
+    raw_dir = course.root / ".cache" / "images" / "raw"
+    wanted, urls = wanted_images(course)
     failed = 0
+    for c in urls:
+        failed += 1
+        print(
+            f'images: {course.rooted(c.file)}: #img("{c.key}"): Typst cannot '
+            'fetch a URL; give the file and its origin: #img(path("images/x.webp"), '
+            f'origin: "{c.key}")',
+            file=sys.stderr,
+        )
+    if wanted:
+        raw_dir.mkdir(parents=True, exist_ok=True)
+    done = 0
     for key, calls in wanted.items():
         try:
-            manifest[key] = course.rooted(produce(course, key, calls, cache))
+            dest = produce(course, key, calls, raw_dir)
+            done += 1
+            print(f"images: {course.rel(dest)} (from {calls[0].origin}): commit it")
         except Exception as e:  # reported, the other images still fetched
             failed += 1
             print(
                 f"images: {key}: {e} ({course.rooted(calls[0].file)})",
                 file=sys.stderr,
             )
-    (cache / "manifest.json").write_text(
-        json.dumps(manifest, indent=1, ensure_ascii=False), encoding="utf-8"
-    )
-    if wanted:
-        print(
-            f"images: {len(manifest)}/{len(wanted)} fetched image(s) in .cache/images/"
-        )
     return 1 if failed else 0
 
 
@@ -409,7 +431,7 @@ def check(course: Course, strict: bool = False) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="typst-slides images",
-        description="Fetch the images given by URL / origin into .cache/images.",
+        description="Fetch the missing images given by an origin, to their path.",
     )
     parser.add_argument(
         "--check", action="store_true", help="list the heavy images of the course"

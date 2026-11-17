@@ -1,18 +1,18 @@
 # ruff: noqa: T201
-"""The course's bibliography for Typst, into lib/ (generated, gitignored).
+"""The links of the course's references, into lib/ (generated, gitignored).
 
     typst-slides sync <main.bib>
 
-run from the course directory, writes:
+run from the course directory, writes lib/refs-links.json: bib key ->
+{zotero, doi, url}, the links of #reference (the Zotero item in dev builds,
+else the DOI, else the URL). The decks cite main.bib itself
+(`#bibliography("/main.bib", style: bib-style)`), so that plain `typst
+compile` works from the course's git sources.
 
-- lib/refs.bib: main.bib (Zotero / Better BibTeX) without duplicate keys
-- lib/refs-links.json: bib key -> {zotero, doi, url}, the links of #reference
-  (slide-app's <Cite>: the Zotero item in dev builds, else the DOI, else the URL)
-- lib/refs.csl: the engine's citation style (typst/csl/normal.csl)
-
-Typst refuses a .bib with a duplicate key, citation-js (slide-app) does not;
-main.bib is managed by Zotero, so it is deduplicated here (first entry wins)
-rather than edited. Duplicates are reported so they can be fixed in Zotero.
+Typst refuses a .bib with a duplicate key: so does this command (exit 1,
+the duplicates listed), rather than writing a deduplicated copy. main.bib is
+managed by Zotero (Better BibTeX): fix them there (merge the items, or give
+them distinct citation keys).
 """
 
 import json
@@ -62,38 +62,52 @@ def zotero_url(refs: str, user: str | None) -> str | None:
     return None
 
 
-def main(bib: str) -> None:
-    engine = pathlib.Path(__file__).resolve().parent / "typst"
+def duplicates(text: str) -> dict[str, list[int]]:
+    """The keys defined more than once: key -> the lines of its entries."""
+    lines: dict[str, list[int]] = {}
+    for m in re.finditer(r"(?m)^@\w+\{([^,\s]+),", text):
+        lines.setdefault(m.group(1), []).append(text.count("\n", 0, m.start()) + 1)
+    return {k: v for k, v in lines.items() if len(v) > 1}
+
+
+def main(bib: str) -> int:
     here = pathlib.Path.cwd()
-    (here / "lib").mkdir(exist_ok=True)
     text = pathlib.Path(bib).read_text()
-    chunks = re.split(r"(?m)^(?=@)", text)
+    dups = duplicates(text)
+    if dups:
+        for k, at in dups.items():
+            where = ", ".join(f"{bib}:{n}" for n in at)
+            print(f"error: duplicate bib key {k} ({where})", file=sys.stderr)
+        print(
+            f"sync: {len(dups)} duplicate key(s): Typst refuses the bibliography; "
+            "fix them in Zotero (merge the items or change their citation keys)",
+            file=sys.stderr,
+        )
+        return 1
+    (here / "lib").mkdir(exist_ok=True)
     user = zotero_user()
-    seen, out, links = set(), [], {}
-    for chunk in chunks:
+    links = {}
+    for chunk in re.split(r"(?m)^(?=@)", text):
         m = re.match(r"@\w+\{([^,\s]+),", chunk)
-        if m and m.group(1) in seen:
-            print(f"duplicate bib key skipped: {m.group(1)}", file=sys.stderr)
+        if not m:
             continue
-        if m:
-            seen.add(m.group(1))
-            z = field(chunk, "zotero")
-            doi = field(chunk, "doi")
-            links[m.group(1)] = {
-                "zotero": zotero_url(z, user) if z else None,
-                # Better BibTeX short DOIs (10/abcd) resolve on doi.org as well
-                "doi": f"https://doi.org/{doi}" if doi else None,
-                "url": field(chunk, "url"),
-            }
-        out.append(chunk)
-    (here / "lib/refs.bib").write_text("".join(out))
+        z = field(chunk, "zotero")
+        doi = field(chunk, "doi")
+        links[m.group(1)] = {
+            "zotero": zotero_url(z, user) if z else None,
+            # Better BibTeX short DOIs (10/abcd) resolve on doi.org as well
+            "doi": f"https://doi.org/{doi}" if doi else None,
+            "url": field(chunk, "url"),
+        }
     (here / "lib/refs-links.json").write_text(json.dumps(links, indent=0))
-    print(f"lib/refs.bib: {len(seen)} entries", file=sys.stderr)
     zlinks = sum(bool(v["zotero"]) for v in links.values())
     who = (
         f"Zotero user {user}"
         if user
         else "Zotero not running: user:* refs taken as yours"
     )
-    print(f"lib/refs-links.json: {zlinks} Zotero links ({who})", file=sys.stderr)
-    (here / "lib/refs.csl").write_text((engine / "csl/normal.csl").read_text())
+    print(
+        f"lib/refs-links.json: {len(links)} entries, {zlinks} Zotero links ({who})",
+        file=sys.stderr,
+    )
+    return 0

@@ -58,11 +58,10 @@ What every deck and module imports (`#import "/common/course.typ": *`):
 #import "/slide-app/templates/academic/academic.typ": academic
 
 // the course's generated data, given to the template (see below)
-#let course-data = (
+#let course-data = if generated { (
   ref-links: json("/lib/refs-links.json"),
-  image-cache: json("/.cache/images/manifest.json"),
   widget-shots: json("/.cache/widgets/manifest.json"),
-)
+) } else { (:) }
 
 #let (theme: course-theme, title-slide: title-slide) = academic(
   course: [Statistical Learning],
@@ -77,11 +76,13 @@ What every deck and module imports (`#import "/common/course.typ": *`):
 The engine and the template read no file of the course: `common/course.typ`
 reads what the tools generate and gives it to the template (`data:`), which
 passes it on to the engine (`course-setup` in `lib/slides.typ`): the
-reference links (`lib/refs-links.json`, `typst-slides sync`), the images
-fetched at build time (`.cache/images/manifest.json`, `make images`) and the
+reference links (`lib/refs-links.json`, `typst-slides sync`) and the
 widgets' pictures for print (`.cache/widgets/manifest.json`, `make
-snapshots`). Every `typst-slides` command writes the missing ones (empty), so
-that the decks compile in an editor or with a plain `typst compile` too.
+snapshots`). These files are gitignored and optional: the course reads them
+only when typst-slides compiles (`generated`, true with `--input
+typst-slides=1`, which typst-slides passes; it writes the missing ones,
+empty). Plain `typst compile` and an editor read none of them, and compile
+from the files git keeps (see [building](building.md#without-typst-slides)).
 
 Everything `slides.typ` defines (and Touying's `#pause`, `#only`…) comes
 along. See [templates](templates.md) for the options.
@@ -118,7 +119,7 @@ slide:
 ## VS Code
 
 `make install-vscode` (or `typst-slides install-vscode`) writes what follows:
-the task and the two settings. Decks use root-absolute paths (`/common/…`, `/modules/…`, `/lib/refs.bib`):
+the task and the two settings. Decks use root-absolute paths (`/common/…`, `/modules/…`, `/main.bib`):
 they start from the course's slide directory (the build's `--root`). The
 Typst extension, Tinymist, must be told that directory and the fonts; set it
 in the workspace's settings (a `.code-workspace` file, or `.vscode/settings.json`
@@ -154,7 +155,7 @@ of the folder opened):
 - In user settings, the root would hold for every Typst file of every window:
   only if this course is your only Typst project.
 - Reload the window (*Developer: Reload Window*) after a change, and run
-  `make` once: `lib/refs.bib` and `lib/refs.csl` are generated.
+  `make` once (the editor compiles as plain typst: no generated file needed).
 
 ## Housekeeping
 
@@ -171,15 +172,19 @@ the list before deleting. `optimize-images` rewrites the references to the
 
 ## Git
 
-The course versions its directory and the `slide-app` link; the bibliography
-files in `lib/` and `out/` are generated:
+The course versions its directory (with its `.bib` and the images
+`make images` fetched) and the `slide-app` link or submodule; what the tool
+generates is ignored, and optional (see
+[building](building.md#without-typst-slides)):
 
 ```
 out/
-lib/refs.bib
-lib/refs.csl
-lib/refs-links.json
+lib/
+.cache/
 ```
+
+`make check` fails when a deck, compiled as plain typst, reads a file git
+ignores.
 
 ## The course site
 

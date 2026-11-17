@@ -34,6 +34,19 @@ make check                  # every deck compiles, no slide overflows
 make pdf                    # out/<deck>.pdf
 ```
 
+## Without typst-slides
+
+A course never depends on this package being maintained: a clone compiles
+to PDF with plain `typst compile`, so its authors can stop using the tool at
+any time. Typst does all of the typesetting, with the same packages and fonts
+as the typst CLI. The tool adds the web version (viewer, live widgets), the
+site, and generated files that only improve the PDFs (reference links,
+pictures of the widgets): the course reads them only when typst-slides
+compiles. The rest is in git: the decks cite the course's `.bib` itself,
+fetched images are committed. `make check` enforces it: it also compiles
+every deck as plain typst does, and fails if that needs a file git ignores.
+See [building](docs/building.md#without-typst-slides).
+
 ## Engine and course
 
 The engine is the `typst-slides` package (its Typst files: `slide-app/` in
@@ -101,7 +114,8 @@ without the rebuilt bundle. Releases: a GitHub release publishes the wheels
   part of a formula or text, moved with shift-O
 - [Interactive widgets](docs/widgets.md): React components in a slide
 - [The viewer](docs/viewer.md): keys, structure browser, live reload, editing
-- [Building and checking](docs/building.md): make targets and options, PDFs, outline
+- [Building and checking](docs/building.md): make targets and options, PDFs, outline,
+  compiling without typst-slides
 - [Upgrading a course](docs/upgrading.md): API versions, `make migrate`;
   [CHANGELOG](CHANGELOG.md)
 - [Converting from MDX](docs/conversion.md): porting a slide-app module

@@ -75,7 +75,7 @@ def test_cli_check_and_outline(course_dir):
     runner = CliRunner()
     r = runner.invoke(app, ["check", "--out", "out"])
     assert r.exit_code == 0, r.output
-    assert "check: all decks compile, no overflow" in r.output
+    assert "check: all decks compile (also as plain typst), no overflow" in r.output
     assert (course_dir / "out" / "demo.pdf").read_bytes().startswith(b"%PDF")
     r = runner.invoke(app, ["outline", "--slides"])
     assert r.exit_code == 0, r.output

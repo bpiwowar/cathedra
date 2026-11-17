@@ -18,7 +18,7 @@ by hand, not regenerated.
 
 1. JSX -> pandoc markdown: <SubSection>/<Slide> become ##/### headings,
    blocks and <Columns>/<div> become fenced divs, <Cite> is resolved to a
-   bib key (doi:// or zotero:// against lib/refs.bib), inline <svg> is
+   bib key (doi:// or zotero:// against the course's .bib), inline <svg> is
    extracted to figures/, inline HTML tags become markdown.
 2. pandoc (markdown -> typst, LaTeX maths -> Typst maths, with the shared
    macros expanded) + mdx2typ.lua (next to this file).
@@ -66,10 +66,19 @@ BLOCKS = {
 }
 
 
+def course_bib() -> str:
+    """The course's .bib, relative to its directory ($SLIDES_BIB: the
+    Makefile's BIB)."""
+    bib = os.environ.get("SLIDES_BIB")
+    if not bib:
+        raise SystemExit("convert: SLIDES_BIB (the course's .bib) is not set")
+    return bib.removeprefix("./").lstrip("/")
+
+
 def bib_index():
     """doi / zotero item key (lower case) -> bib key."""
     index = {}
-    text = (TYPST / "lib/refs.bib").read_text()
+    text = (TYPST / course_bib()).read_text()
     for chunk in re.split(r"(?m)^(?=@)", text):
         m = re.match(r"@\w+\{([^,\s]+),", chunk)
         if not m:
@@ -90,14 +99,14 @@ BIB = None
 
 
 def cite_key(entry: str) -> str | None:
-    """The bib key of a <Cite> entry; None (with a warning) when not in lib/refs.bib."""
+    """The bib key of a <Cite> entry; None (with a warning) when not in the course's .bib."""
     if entry.startswith("doi://") or entry.startswith("zotero://"):
         key = BIB.get(entry.lower())
     else:
         key = entry if ("key:" + entry) in BIB else None
     if not key:
         print(
-            f"citation not found in lib/refs.bib (left as TODO-REVIEW): {entry}",
+            f"citation not found in the course's .bib (left as TODO-REVIEW): {entry}",
             file=sys.stderr,
         )
     return key
@@ -1077,7 +1086,7 @@ def convert(
             + info("date")
             + "))\n\n"
             + typ.lstrip()
-            + '\n#place(hide(bibliography("/lib/refs.bib", style: "/lib/refs.csl", title: none)))\n'
+            + f'\n#place(hide(bibliography("/{course_bib()}", style: bib-style, title: none)))\n'
         )
         # lectures/<mid>/<mid>.typ when the deck has a folder, else lectures/<mid>.typ
         if out_dir == deck_dir:

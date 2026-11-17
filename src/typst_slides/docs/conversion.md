@@ -116,7 +116,7 @@ slide-app with the MDX engine, commit `d84f011` of the slide-app repository
 | `$…$` (LaTeX) | `$…$` (Typst maths) |
 | tables | `#table(…)` |
 
-`<Cite>` entries are matched against `lib/refs.bib` by DOI (`doi://…`) or
+`<Cite>` entries are matched against the course's `.bib` (`BIB`) by DOI (`doi://…`) or
 Zotero key (`zotero://select/library/items/…`); an unknown entry stops the
 conversion.
 
