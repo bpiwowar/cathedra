@@ -304,6 +304,30 @@
   )
 }
 
+// The current slide's title: its `===` heading. A slide
+// whose heading is empty (`===` alone) continues the previous one, whose
+// title it shows numbered: `Title (2)`, `Title (3)`…
+#let slide-title() = context {
+  let page = here().page()
+  let hs = query(heading).filter(h => h.location().page() <= page and h.level <= 3)
+  let blank(c) = (
+    c == none
+      or c == []
+      or c == [ ]
+      or (c.has("text") and c.text.trim() == "")
+      or (c.has("children") and c.children.all(blank))
+  )
+  if hs == () or hs.last().level != 3 { return none }
+  let n = 1
+  let i = hs.len() - 1
+  while i >= 0 and hs.at(i).level == 3 and blank(hs.at(i).body) {
+    n += 1
+    i -= 1
+  }
+  if i < 0 or hs.at(i).level != 3 { return none }
+  if n == 1 { hs.at(i).body } else [#hs.at(i).body (#n)]
+}
+
 // A sidebar slide: a grey column on the left holding the slide title and
 // what goes with it (a sub-heading, the references…), the main content on
 // the right with the whole height of the slide:
@@ -325,9 +349,7 @@
       stroke: (left: 4pt + accent.lighten(60%)),
       {
         if title {
-          block(below: 0.8em, text(size: 1.1em, weight: "bold", fill: primary, utils.display-current-heading(
-            level: 3,
-          )))
+          block(below: 0.8em, text(size: 1.1em, weight: "bold", fill: primary, slide-title()))
         }
         side
       },

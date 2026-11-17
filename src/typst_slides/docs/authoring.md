@@ -60,10 +60,14 @@ figures, its metadata, and it starts with a sub-section:
 | `= Title` | deck only | a main section, with its section slide |
 | `== Title` | first line of a module | a sub-section, with its sub-section slide |
 | `=== Title` | anywhere | one slide |
+| `===` (empty) | after a `=== Title` slide | one more slide, titled `Title (2)`, `Title (3)`… |
 
 Everything until the next heading belongs to the slide. Do not write `---` at
 the top level: Touying reads it as a slide break (use `—`).
 `make space` puts the canonical blank lines between slides.
+
+The title above a slide (and in a `#sidebar`) is `#slide-title()`: a
+template other than `academic` calls it too.
 
 ## Steps
 

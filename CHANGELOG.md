@@ -8,6 +8,12 @@ to in `.slide-app-version` (missing = 1); `make migrate` brings it up to date
 
 ## API 3 (typst-slides 0.1.0)
 
+### Added
+
+- An empty `===` continues the previous slide's title, numbered:
+  `Title (2)`, `Title (3)`… (`slide-title()` in `lib/slides.typ`, used by
+  the template and `#sidebar`).
+
 ### Changed
 
 - `make serve-course` shows the production site (no `dev: true` deck or

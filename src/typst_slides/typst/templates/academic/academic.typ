@@ -211,7 +211,7 @@
         size: 1.25em,
         weight: "bold",
         fill: primary,
-        utils.display-current-heading(level: 3),
+        slide-title(),
       )) }, details-back: if fr [Retour à la diapositive] else [Back to slide]),
       ..args,
     )
