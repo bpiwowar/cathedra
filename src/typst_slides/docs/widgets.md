@@ -95,11 +95,16 @@ export function Embeddings({ url, onReady }: { url: string; onReady: () => void 
 // widgets/index.ts:  embeddings: { component: Embeddings, async: true }
 ```
 
-- Chrome is looked up in `$CHROME`, then in the usual install places. Without
-  it, the PDFs show the fallbacks (or the dashed frame).
+- The pictures are taken by headless Chromium through Playwright
+  (`typst-slides[browser]`, then `playwright install chromium`; a slide-app
+  checkout has the extra), or by Chrome (`$CHROME`, then the usual install
+  places) when Playwright has no browser of its own. Without either, the
+  PDFs show the fallbacks (or the dashed frame).
 - `WIDGET_SCALE` (default 3) sets the picture's pixels per pt.
-- A plain `typst compile` takes the pictures with
-  `--input widget-shots=/.cache/widgets/<deck>.json`.
+- The pictures are listed in `.cache/widgets/manifest.json`, which the
+  course's `common/course.typ` reads and gives to the template
+  (`widget-shots`): any compilation of the deck (a plain `typst compile`
+  too) shows them.
 
 A widget can stand in for a figure drawn in steps, keeping the figure for the
 PDF:
@@ -130,14 +135,19 @@ export default {
 - `async: true`, optional: the widget calls `onReady` when its picture can
   be taken (see [in the PDF](#in-the-pdf-and-the-handout)).
 
-The build (esbuild) bundles `widgets/index.ts` and what it imports with the
-viewer; TypeScript and TSX need no configuration. `react` and `react-dom` are
-the engine's (one copy for the page). Other packages are looked up as Node
-does, from `widgets/` upwards (the `node_modules` of the nearest package: the
-course's, or the directory above it when the course has no `package.json`),
-then in the engine's: add a dependency there with `pnpm add` (e.g.
-`pnpm add d3`). The dev server rebuilds and
-reloads when a widget file changes; `make html` bundles them for the site.
+The build bundles `widgets/index.ts` and what it imports into
+`out/<deck>/widgets.js` with [esbuild](https://esbuild.github.io/) (the
+course's `node_modules/.bin/esbuild`, else one on the `PATH`, else the
+official binary, downloaded once into the user cache: no Node needed);
+TypeScript and TSX need no configuration. `react`, `react-dom` and
+`react/jsx-runtime` are the viewer's (one copy for the page: the bundle's
+imports of them are shims reading the viewer's React). Other packages are
+looked up as Node does, from `widgets/` upwards (the `node_modules` of the
+nearest package: the course's, or the directory above it): a course whose
+widgets use packages (e.g. `d3`) has a `package.json` and installs them
+(`pnpm add d3`). A deck of a course without widgets needs none of this. The
+dev server rebuilds and reloads when a widget file changes; `make html`
+bundles them for the site.
 
 ### A React component
 

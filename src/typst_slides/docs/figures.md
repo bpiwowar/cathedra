@@ -78,7 +78,7 @@ line("b.south", (2, -1))      // names inside a morph stay visible outside
   are unchanged (`morph` is its body there).
 
 How: on the web, a part records its box on the page (`<morph>` metadata,
-`lib/morph.typ`), and `build.mjs` writes these boxes to `morph.json`.
+`lib/morph.typ`), and the build writes these boxes to `morph.json`.
 `src/morph.ts` follows the steps, `src/morph-svg.ts` builds the transition
 from the pages' SVG (see [the viewer](viewer.md#how-the-pages-are-shown)),
 with copies of their elements, no pixels:

@@ -128,11 +128,10 @@ An image can be fetched at build time instead of being committed:
   by default a hash of the source and the cap.
 
 `make images` (run by `serve`, `html`, `pdf` and `handout`) does it:
-downloads once into `.cache/images/raw/`, shrinks with sharp, writes WebP
+downloads once into `.cache/images/raw/`, shrinks (Pillow), writes WebP
 (SVG kept as it is) into `.cache/images/` and lists them in
-`.cache/images/manifest.json`, which the compiles receive as
-`--input img-cache=/.cache/images/manifest.json` (the dev server and the web
-build read it at start: restart after a new fetched image). `.cache/` is
+`.cache/images/manifest.json`, which the course's `common/course.typ` reads
+and gives to the template (`image-cache`, see [course](course.md#commoncoursetyp)). `.cache/` is
 gitignored, so the sources stay free of the files; a build needs the network
 (or Zotero) once.
 

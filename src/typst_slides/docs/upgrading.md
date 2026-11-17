@@ -1,7 +1,7 @@
 # Upgrading a course
 
-The engine's API changes are numbered: [`VERSION`](../VERSION) is the current
-API version, [`CHANGELOG.md`](../CHANGELOG.md) lists what changed in each.
+The engine's API changes are numbered: `VERSION` (`src/typst_slides/typst/VERSION`) is the current
+API version, [`CHANGELOG.md`](CHANGELOG.md) lists what changed in each.
 A course records the version its `.typ` files are migrated to in
 `.slide-app-version` (a single integer, at the root of the course's typst
 directory; a missing file means 1). Commit it.
@@ -9,8 +9,8 @@ directory; a missing file means 1). Commit it.
 ## Upgrade = four steps
 
 ```bash
-git -C ../slide-app fetch && git -C ../slide-app checkout origin/master   # 1. update slide-app
-make setup                         # (only if the engine's dependencies changed)
+uvx typst-slides@latest --version   # 1. update the engine (or the slide-app submodule:
+                                   #    git -C slide-app pull)
 make migrate DRY=1                 # 2. what would change: a diff, nothing written
 make migrate                       # 3. rewrite the sources, write .slide-app-version
 make check                         # 4. every deck compiles; look at the slides, commit
@@ -33,7 +33,7 @@ the course is behind the engine.
 ## Adding a migration (engine side)
 
 Bump `VERSION`, add a section to the CHANGELOG, and register the functions in
-`MIGRATIONS` of `tools/migrate.py`: `{to_version: [(name, fn)]}` with
+`MIGRATIONS` of `src/typst_slides/migrate.py`: `{to_version: [(name, fn)]}` with
 `fn(text, path) -> (new_text, count, skipped)`, `skipped` being
-`(offset, message)` pairs. `tools/migrate.py --check` tells whether a course
+`(offset, message)` pairs. `typst-slides migrate --check` tells whether a course
 is behind (exit status 1).

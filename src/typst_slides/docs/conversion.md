@@ -21,9 +21,9 @@ whose folder `lectures/<id>/` exists is written there, as `<id>.typ`.
 1. The JSX is turned into pandoc markdown (headings, fenced divs, raw Typst).
 2. pandoc converts markdown to Typst and LaTeX maths to Typst maths, with the
    MathJax macros of the MDX decks (`MDX_MACROS`) expanded;
-   `tools/mdx2typ.lua` turns the divs into `lib/slides.typ` calls.
+   a Lua filter (`mdx2typ.lua`) turns the divs into `lib/slides.typ` calls.
 3. The maths is tidied to use the course notation, `---` / `--` become
-   dashes, `tools/spacing.py` spaces the slides.
+   dashes, the slides are spaced (`typst-slides space`).
 
 The output starts with `#import "/common/course.typ": *`.
 
@@ -62,11 +62,21 @@ CSS classes of the course's own theme (e.g. `.llm-prompt`) map to functions of
 A class neither the engine nor the course knows is kept as a
 `// TODO-REVIEW: class …` comment.
 
-Directly, `tools/mdx2typ.py [--src DIR] [--macros FILE] [--notation FILE]
+Directly, `typst-slides convert [--src DIR] [--macros FILE] [--notation FILE]
 [--classes FILE] [--deck] [--backup DIR] <id>…`, from the course directory
 (`SLIDES_SRC`: the `SRC` of the Makefile).
 
-Needs `pandoc` and `uv`; the bibliography must be in sync (`make setup`).
+Needs [pandoc](https://pandoc.org/installing.html) and the `convert` extra
+(`typst-slides[convert]`, for json5; a slide-app checkout installs it); the
+bibliography must be in sync (`make setup`).
+
+## The MDX decks themselves
+
+typst-slides only converts MDX: it cannot build MDX decks any more (the
+webpack/Reveal engine was removed). To build or view the MDX originals (e.g.
+to compare a converted module with its source), use the last version of
+slide-app with the MDX engine, commit `d84f011` of the slide-app repository
+(Node, `pnpm install` at its root), in a separate checkout or worktree.
 
 ## What becomes what
 

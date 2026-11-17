@@ -7,10 +7,10 @@ section with an exported `HELP_PROJECT` define: a title line, then
 
 | Target | |
 |---|---|
-| `make setup` | the `slide-app` link, the engine's dependencies, Font Awesome fonts, bibliography |
+| `make setup` | the `slide-app` link (unless a submodule), bibliography |
 | `make serve DECK=<id>` | dev server on http://localhost:8000 (writes into `OUT`) |
 | `make html` | the web decks, `out/<deck>/`: the pages as SVG (`svg/`, `svg.json`), the slide structure, the viewer (see [the viewer](viewer.md#how-the-pages-are-shown)) |
-| `make pdf` | printable PDFs, `out/<deck>.pdf`, one page per step (slide-app's `make pdf` / `pdf-dev` call it with `OUT=<output>/pdf`, see [course](course.md#next-to-mdx-decks)) |
+| `make pdf` | printable PDFs, `out/<deck>.pdf`, one page per step |
 | `make handout` | handouts, `out/<deck>-handout.pdf`: one page per slide, its last step |
 | `make check` | compile every deck; fail on errors and on slides that overflow |
 | `make outline` | deck structure, slide counts, time vs the `target` of `course.yaml` |
@@ -20,7 +20,7 @@ section with an exported `HELP_PROJECT` define: a title line, then
 | `make migrate` | migrate the sources to the engine's API version (`DRY=1`: a diff only; see [upgrading](upgrading.md)) |
 | `make space` | canonical blank lines between slides |
 | `make format` | indent every `.typ` with [typstyle](https://typstyle-rs.github.io/typstyle/) (`brew install typstyle`); the converter runs it too |
-| `make live-test` | browser tests of the viewer (needs `make serve`) |
+| `make live-test` | browser tests of the viewer, against `make serve` (a slide-app checkout, `typst-slides[browser]`) |
 | `make serve-course` | the whole course on http://localhost:9010: the index page, every deck (see [the course site](#the-course-site)) |
 | `make site` / `site-dev` | the course site: decks, index page, static files, in `DESTDIR` / `DESTDIR_DEV` |
 | `make site-pdf` / `site-pdf-dev` | the PDFs of the `pdf: true` decks, `<site>/pdf/<id>.pdf` (MD5-cached) |
@@ -35,11 +35,19 @@ section with an exported `HELP_PROJECT` define: a title line, then
 
 ## The dev server
 
-`make serve` (and slide-app's dev server, which starts one per deck) applies
-changes live: the deck and its modules, `lib/`, `templates/`, the viewer
-(`src/`) and these docs. The server's own code (`build.mjs`, `tools/*.mjs`)
-is not reloaded in place: the server restarts by itself when it changes, and
-the open pages reload. Nothing to restart by hand.
+`make serve` (and `make serve-course`, which starts one per deck) applies
+changes live: the deck and its modules, any file the last compilation read
+(images, data, the bibliography), the engine's `lib/` and `templates/`, the
+course's widgets (the page reloads) and these docs (the help). The server's
+own code (Python) and the viewer bundle are not reloaded in place: restart
+`make serve` after changing them; the open pages reconnect and reload.
+
+Every make target runs `$(TYPST_SLIDES) <command>` (see
+[course](course.md#the-engine-package-or-submodule)); `typst-slides --help`
+lists the commands, which can also be run by hand from the course directory
+(`typst-slides check lectures/lecture-1.typ`, `typst-slides outline --slides`…).
+Decks are compiled in parallel threads in one process (the compilations share
+Typst's cache), and every compilation gets the engine's fonts.
 
 ## Options
 
@@ -49,6 +57,7 @@ course](course.md)), or on the command line (`make serve DECK=lecture-2`):
 | Option | Default | |
 |---|---|---|
 | `BIB` | (required) | the Zotero / Better BibTeX bibliography |
+| `TYPST_SLIDES` | `uvx typst-slides`, or `uv run --all-extras --project <checkout> typst-slides` in a checkout of slide-app | the command the targets run |
 | `SLIDES_SCHEDULE` | none | YAML `lectures: [{id, title, target}]`: titles, order, target times |
 | `DECK` | the first deck | what `make serve` shows |
 | `DEV` | none | `DEV=1`: `make html` builds for the author — **E** / shift-E open the sources, references link to Zotero — it writes the sources' absolute paths into the output: not for publishing |
@@ -69,7 +78,7 @@ course](course.md)), or on the command line (`make serve DECK=lecture-2`):
 
 ## The course site
 
-`tools/site.mjs` makes what a course publishes, from the schedule
+`typst-slides site` makes what a course publishes, from the schedule
 (`SLIDES_SCHEDULE`, see [course](course.md#the-schedule)):
 
 - `make site` builds every deck of the schedule into `DESTDIR/<id>/` (a
@@ -85,7 +94,7 @@ course](course.md)), or on the command line (`make serve DECK=lecture-2`):
 - `make site-pdf` / `site-pdf-dev` compile the `pdf: true` decks to
   `<site>/pdf/<id>.pdf`, the index's PDF links (with the widget pictures,
   `make snapshots`). A PDF is compiled again only when the MD5 of what its
-  last compilation read (`typst --deps`) changed: `.cache/pdf/`; `FORCE=1`
+  last compilation read changed: `.cache/pdf/`; `FORCE=1`
   compiles them all.
 - `make deploy` / `deploy-dev`: the `practical` hook, the site and its PDFs
   (not with `DEPLOY_PDF=no`), then `rsync --delete` to `DEPLOY_DEST` /
@@ -141,5 +150,5 @@ another with `academic(aspect-ratio: "16-10")`, a deck with
 
 ```bash
 typst compile --root . --font-path slide-app/fonts lectures/lecture-1.typ out.pdf \
-  --input todo=0      # no work-in-progress notes
+  --input todo=0      # no work-in-progress notes (the typst CLI, if installed)
 ```

@@ -14,7 +14,7 @@ missing paper goes into Zotero first, then into the bibliography.
 
 ## Where the bibliography comes from
 
-`tools/sync.py <BIB>` (run by `make setup`, and by any make target when the
+`typst-slides sync <BIB>` (run by `make setup`, and by any make target when the
 course's `BIB` changed) writes, in the course:
 
 - `lib/refs.bib`: the shared bibliography, as Typst reads it;
@@ -38,6 +38,6 @@ The newspaper icon in front of a reference is a link:
 The Zotero links depend on the machine. `sync.py` asks the running Zotero app
 for its user id: an item of another user's library gets no Zotero link (its
 DOI is used), a group item opens in the group. When Zotero is not running,
-every personal item is taken as the local user's. Run `./tools/sync.py` again
+every personal item is taken as the local user's. Run `typst-slides sync` again
 once Zotero is open (from the course directory, with the bibliography as
 argument). The generated files are not versioned.

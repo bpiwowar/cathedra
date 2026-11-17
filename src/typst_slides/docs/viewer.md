@@ -81,18 +81,18 @@ links open the Zotero app.
 
 ## How the pages are shown
 
-The pages are inline SVG, from typst.ts (the printable PDFs are `make pdf`'s,
-see [building](building.md)):
+The pages are inline SVG, from Typst's own SVG export, completed by the
+engine (the printable PDFs are `make pdf`'s, see [building](building.md)):
 
-- `build.mjs` cuts typst.ts's SVG of the deck into `svg/<hash>.svg` (one per
-  page, named by content), `svg/glyphs-<hash>.svg` (the glyph outlines,
-  shared, loaded once) and `svg/img-<hash>.*` (each image once); `svg.json`
-  lists them. A live update fetches the changed pages only.
-- The viewer (`src/svg-pages.ts`) mounts the pages around the current slide
+- the build writes `svg/<hash>.svg` (one per page, named by content),
+  `svg/glyphs-<hash>.svg` (the glyph outlines, shared, loaded once) and
+  `svg/img-<hash>.*` (each image once); `svg.json` lists them. A live update
+  fetches the changed pages only.
+- The viewer (`viewer/src/svg-pages.ts`) mounts the pages around the current slide
   and unmounts the others: a page is about a thousand DOM nodes. The
   overview (**Esc**) mounts only the slides on screen (the step shown),
   and unmounts them when they leave it.
-- Text selection and find-in-page use typst.ts's transparent text; a copy
+- Text selection and find-in-page use a transparent text layer; a copy
   joins the pieces of a line (with a space where they are apart) and puts a
   line break between lines.
 - Links are the SVG's own (internal ones go through `details.ts`).
@@ -101,3 +101,34 @@ see [building](building.md)):
 On lecture-1 (179 pages): 2.0 MB to transfer for every page (gzip), and only
 the pages shown are fetched; the overview opens with a few thousand DOM
 nodes.
+
+## SVG pages
+
+What the build gives the viewer, whatever renders the pages (today: Typst's
+SVG export plus the engine's native module, `rust/pages.rs`; a backend change
+must keep this):
+
+- `svg.json`: `{w, h, glyphs, pages}`: the page size in pt (the page
+  markers' exact size), the glyph file (`svg/glyphs-<hash>.svg`) and the page
+  hashes in page order.
+- A page, `svg/<hash>.svg` (the hash names its content): `<svg
+  class="typst-svg" viewBox="0 0 w h" preserveAspectRatio="none">` holding
+  one `<g class="typst-page">` (the page's content, in page units: 1 = 1pt),
+  then the page's own definitions (clip paths, gradients) if any.
+- Glyphs: `<use xlink:href="#g…">` referring to the `<symbol id="g…">` of the
+  glyph file, which the viewer puts once in the document.
+- Images: `xlink:href="svg/img-<hash>.<ext>"` files, not data URIs.
+- Text layer: inside the page's group, after its content, one
+  `<foreignObject transform="matrix(…)" x y width height>` per run of text,
+  holding `<div class="tsel" style="font-size: Npx">text</div>`
+  (transparent; the page's CSS lays it out, `index.html`). Selection,
+  find-in-page, copy (`svg-pages.ts`) and the Zotero labels (Z,
+  `zotero.ts`) read these.
+- Links, after the text layer (so that it does not cover them): `<a
+  transform="matrix(…)"><rect width height fill="transparent"/></a>`. An
+  external link has `target="_blank"` and its URL in `href` / `xlink:href`
+  (a `zotero:` one no target: it goes to the app); an internal one is
+  `xlink:href="#" onclick="handleTypstLocation(this, page, x, y); return
+  false"` (1-based page; `details.ts` follows it).
+- Morphing (`morph-svg.ts`) works on the geometry of the page's elements,
+  with the boxes of `morph.json`.

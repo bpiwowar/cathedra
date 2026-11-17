@@ -61,5 +61,5 @@ bar on the left; the structure browser shows them as the *in detail* type
 
 Implementation: `#details`, `collect-details`, `details-appendix`,
 `details-link`, `details-back` in `lib/slides.typ` (the page markers carry
-the group: `details`); `tools/outline.mjs` (the groups and the slides linking
+the group: `details`); the outline (the groups and the slides linking
 to them: `outline.details`); `src/details.ts` (the viewer).

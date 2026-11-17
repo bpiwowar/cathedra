@@ -1,14 +1,33 @@
 # Setting up a course
 
-A course's Typst slides live in one directory next to the slide-app submodule
-(e.g. `slides/typst/`, with `slides/slide-app/`), or in the directory that
-holds the submodule, with the sources in `SRC` (e.g. `slides/src/`; see
-[building](building.md)).
+A course's Typst slides live in one directory (Typst's root: `lib/`,
+`.cache/`, `out/`), with the sources there or in `SRC` (e.g. `slides/src/`;
+see [building](building.md)).
 
-`slide-app init <dir>` writes all of what follows (and a first deck), with
-the course in a directory of its own and the `slide-app` link; `slide-app new
-<id>` adds `lectures/<id>.typ` and its schedule entry. Typst is the default;
-`--mdx` selects the MDX engine. This page is what they write, by hand.
+## The engine: package or submodule
+
+The engine is the `typst-slides` Python package. A course uses it in one of
+two ways:
+
+- **The released package** (`uvx typst-slides`, nothing installed by hand):
+  `uvx typst-slides setup` makes the `slide-app` link to the package's Typst
+  files (`lib/`, `templates/`, `fonts/`, `makefile.mk`); the decks import
+  `/slide-app/lib/slides.typ`, the Makefile includes `slide-app/makefile.mk`.
+  The link is refreshed by every `typst-slides` command (uvx installs a new
+  version elsewhere). `TYPST_SLIDES` (default `uvx typst-slides`) is the
+  command the make targets run: pin a version with
+  `TYPST_SLIDES := uvx typst-slides==0.1.0`, add the widget pictures with
+  `TYPST_SLIDES := uvx --from 'typst-slides[browser]' typst-slides`.
+- **A checkout of slide-app** (a git submodule `slide-app/`, for developing
+  the engine with the course): the decks import
+  `/slide-app/typst/lib/slides.typ`, the Makefile includes
+  `slide-app/typst/makefile.mk`, and the make targets run that checkout's own
+  version: `TYPST_SLIDES = uv run --all-extras --project slide-app
+  typst-slides`, chosen automatically when `makefile.mk` is in a checkout.
+  Its Python files are used in place (an edit applies to the next command);
+  an edit of its Rust sources (`rust/`, `Cargo.toml`) makes `uv run` rebuild
+  the native module first (`[tool.uv] cache-keys`; Rust and cargo needed),
+  and an edit of the viewer (`viewer/`) needs `pnpm run build` there.
 
 ## Makefile
 
@@ -18,7 +37,7 @@ SLIDES_SCHEDULE := ../../course.yaml
 # the Zotero / Better BibTeX bibliography
 BIB             := ../src/main.bib
 
-include ../slide-app/typst/makefile.mk
+include slide-app/makefile.mk          # slide-app/typst/makefile.mk: a submodule
 ```
 
 The options are listed in [building](building.md#options); `make
@@ -27,7 +46,7 @@ update-makefile` writes them into the Makefile as a generated comment block
 Then:
 
 ```bash
-make setup    # links slide-app, installs the engine, fonts, bibliography
+make setup    # the slide-app link (unless a submodule), the bibliography
 ```
 
 ## common/course.typ
@@ -36,16 +55,33 @@ What every deck and module imports (`#import "/common/course.typ": *`):
 
 ```typst
 #import "/slide-app/lib/slides.typ": *
-#import "/slide-app/templates/academic.typ": academic
+#import "/slide-app/templates/academic/academic.typ": academic
+
+// the course's generated data, given to the template (see below)
+#let course-data = (
+  ref-links: json("/lib/refs-links.json"),
+  image-cache: json("/.cache/images/manifest.json"),
+  widget-shots: json("/.cache/widgets/manifest.json"),
+)
 
 #let (theme: course-theme, title-slide: title-slide) = academic(
   course: [Statistical Learning],
   background: read("/common/background.svg", encoding: none),
+  data: course-data,
 )
 
 // the course notation, for maths: $tf(t, d)$
 #let tf = math.upright("tf")
 ```
+
+The engine and the template read no file of the course: `common/course.typ`
+reads what the tools generate and gives it to the template (`data:`), which
+passes it on to the engine (`course-setup` in `lib/slides.typ`): the
+reference links (`lib/refs-links.json`, `typst-slides sync`), the images
+fetched at build time (`.cache/images/manifest.json`, `make images`) and the
+widgets' pictures for print (`.cache/widgets/manifest.json`, `make
+snapshots`). Every `typst-slides` command writes the missing ones (empty), so
+that the decks compile in an editor or with a plain `typst compile` too.
 
 Everything `slides.typ` defines (and Touying's `#pause`, `#only`…) comes
 along. See [templates](templates.md) for the options.
@@ -81,7 +117,7 @@ slide:
 
 ## VS Code
 
-`make install-vscode` (or `slide-app install-vscode`) writes what follows:
+`make install-vscode` (or `typst-slides install-vscode`) writes what follows:
 the task and the two settings. Decks use root-absolute paths (`/common/…`, `/modules/…`, `/lib/refs.bib`):
 they start from the course's slide directory (the build's `--root`). The
 Typst extension, Tinymist, must be told that directory and the fonts; set it
@@ -90,13 +126,13 @@ of the folder opened):
 
 ```json
 "tinymist.rootPath": "/absolute/path/to/course",
-"tinymist.fontPaths": ["/absolute/path/to/course/slide-app/typst/fonts"]
+"tinymist.fontPaths": ["/absolute/path/to/course/slide-app/fonts"]
 ```
 
 - `make install-vscode` also adds the task *Show slide in Typst deck*
-  (`.vscode/tasks.json`): it runs `slide-app/tools/open-slide.mjs` on the file
-  and line under the cursor, which sends `GET /goto?file=&line=` to the
-  running deck (`make serve`, or the sockets of slide-app's dev server) and
+  (`.vscode/tasks.json`): it runs `make open-slide` on the file and line
+  under the cursor, which sends `GET /goto?file=&line=` to the running deck
+  (`make serve`, or the sockets of `make serve-course`) and
   moves the open browser tabs to that slide. Bind it to a key with
   `--keybinding` (a user keybinding, active in `.typ` files); from a shell,
   `make open-slide FILE=lectures/lecture-1.typ LINE=42`. The folder's
@@ -164,44 +200,3 @@ lectures:
   - title: "Lecture 2: Guest talk"
     externalPdf: pdf/lecture-2.pdf   # a file of the site (STATIC): a link only
 ```
-
-The site needs no webpack: this replaces slide-app's MDX build (below) for a
-course without MDX decks.
-
-## Next to MDX decks
-
-In a slide-app course, a deck of the schedule can be written in Typst while
-the others stay in MDX: mark it in the deck list (`webpack.config.js`
-`sources`, or the file it reads):
-
-```yaml
-  - id: lecture-1
-    title: "Lecture 1: Foundations"
-    format: typst          # typst/lectures/lecture-1.typ
-```
-
-slide-app then:
-
-- leaves it out of the webpack build (with no MDX deck left, webpack only
-  writes the index page: no deck runtime, no MathJax);
-- `make html` / `html-dev` (and the `-force` variants): builds it into
-  `<output>/<id>/` (after webpack), with `make -C typst html`; `html-dev`
-  adds the `dev: true` decks, but is built for readers (no source paths,
-  no E / shift-E, DOI links rather than Zotero): it is published by
-  `deploy-dev`. The author build is the dev server's;
-- `make pdf` / `pdf-dev`: when it has `pdf: true`, compiles it with `make -C
-  typst pdf` straight to `<output>/pdf/<id>.pdf`, where the index page's PDF
-  link and `make deploy` expect it — no HTML build, no browser, `PDF_FLAGS`
-  ignored. A `dev: true` deck is not in the production build, so only
-  `pdf-dev` prints it (`make pdf` says so when that leaves nothing to print);
-- the index page links `<id>/`, with its outline and synopsis;
-- `make outline` lists it with the others, in order, in the totals.
-
-The Typst directory is `typst/` by default. Elsewhere, say so in three
-places: `TYPST_DIR` in the course Makefile (build), the `typst: { dir }` slide
-option (index page), `webpackConfig.typst = { dir }` (`make outline`).
-In slide-app's dev server (`make serve-dev`), the first request under
-`/<id>/` starts that deck's Typst dev server (live reload, H, E…) on a Unix
-socket, `typst/out/<id>.sock`, and forwards `/<id>/` to it: the index page's
-link works as in the built site. These servers stop with the dev server.
-`make -C typst serve DECK=<id>` serves one deck alone, on port 8000.
