@@ -10,6 +10,10 @@ to in `.slide-app-version` (missing = 1); `make migrate` brings it up to date
 
 ### Changed
 
+- `make serve-course` shows the production site (no `dev: true` deck or
+  practical); the new `make serve-dev` shows the dev site, as
+  `serve-course` did before (`typst-slides site serve --dev`).
+
 - The engine and the templates read no file of the course: the course's
   `common/course.typ` reads its generated data (`lib/refs-links.json`,
   `.cache/images/manifest.json`, `.cache/widgets/manifest.json`) and gives it

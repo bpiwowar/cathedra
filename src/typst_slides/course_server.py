@@ -1,4 +1,7 @@
-"""The dev server of the whole course (`make serve-course`).
+"""The dev server of the whole course (`make serve-course` / `make serve-dev`).
+
+`dev=False` shows what the production site lists (no `dev: true` decks or
+practicals), `dev=True` the dev site.
 
 The index page on / (outlines recomputed when a source changed, the open
 pages reloaded then, via /_events); each deck on /<id>/, served by its own
@@ -30,8 +33,10 @@ class CourseServer:
         statics: list[Path],
         practicals: Path | None,
         sockets: Path,
+        dev: bool = False,
     ):
         self.course = course
+        self.dev = dev
         self.statics = [s.resolve() for s in statics]
         self.practicals = practicals
         self.sockets = sockets.resolve()
@@ -41,7 +46,7 @@ class CourseServer:
         self.listeners: set[asyncio.Queue] = set()
 
     def ids(self) -> list[str]:
-        return deck_ids(self.course, schedule(self.course), dev=True)
+        return deck_ids(self.course, schedule(self.course), dev=self.dev)
 
     def socket_of(self, deck: str) -> Path:
         return self.sockets / f"{deck}.sock"
@@ -104,11 +109,13 @@ class CourseServer:
         if not self.cached or t > self.cached[0]:
             sched = schedule(self.course)
             by_id, bundles = read_practicals(self.practicals)
-            ids = deck_ids(self.course, sched, dev=True)
+            ids = deck_ids(self.course, sched, dev=self.dev)
             outs = await asyncio.to_thread(
                 outlines, self.course, sched, ids, self.sockets, t
             )
-            page = index_html(self.course, sched, outs, True, by_id, bundles, live=True)
+            page = index_html(
+                self.course, sched, outs, self.dev, by_id, bundles, live=True
+            )
             self.cached = (t, page)
         return web.Response(text=self.cached[1], content_type="text/html")
 
@@ -252,8 +259,9 @@ def serve_course(
     statics: list[Path],
     practicals: Path | None,
     sockets: Path,
+    dev: bool = False,
 ) -> None:
-    server = CourseServer(course, statics, practicals, sockets)
+    server = CourseServer(course, statics, practicals, sockets, dev)
     try:
         asyncio.run(_run(server, port))
     finally:

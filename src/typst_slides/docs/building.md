@@ -21,7 +21,8 @@ section with an exported `HELP_PROJECT` define: a title line, then
 | `make space` | canonical blank lines between slides |
 | `make format` | indent every `.typ` with [typstyle](https://typstyle-rs.github.io/typstyle/) (`brew install typstyle`); the converter runs it too |
 | `make live-test` | browser tests of the viewer, against `make serve` (a slide-app checkout, `typst-slides[browser]`) |
-| `make serve-course` | the whole course on http://localhost:9010: the index page, every deck (see [the course site](#the-course-site)) |
+| `make serve-course` | the production site, live, on http://localhost:9010: the index page and its decks, no `dev: true` deck or practical (see [the course site](#the-course-site)) |
+| `make serve-dev` | the same for the dev site: the `dev: true` decks and practicals too |
 | `make site` / `site-dev` | the course site: decks, index page, static files, in `DESTDIR` / `DESTDIR_DEV` |
 | `make site-pdf` / `site-pdf-dev` | the PDFs of the `pdf: true` decks, `<site>/pdf/<id>.pdf` (MD5-cached) |
 | `make deploy` / `deploy-dev` | site + PDFs, rsync to `DEPLOY_DEST` / `DEPLOY_DEST_DEV` |
@@ -123,13 +124,15 @@ translates it, and `index: {practicals: TP}` overrides a string (`title`,
 `lectures`, `practicals`, `optional`, `outline`, `expandAll`, `collapseAll`).
 
 `make serve-course` is the dev server of the whole course (port
-`COURSE_PORT`, 9010): the index on `/` (the dev site's, rebuilt when a source
-changes, the page reloading), and under `/<id>/` the deck's own dev server
+`COURSE_PORT`, 9010) as the production site lists it, `make serve-dev` as the
+dev site does (with the `dev: true` decks and practicals): the index on `/`
+(rebuilt when a source changes, the page reloading), and under `/<id>/` the
+deck's own dev server
 (live reload, E, H…), started on its first request on the socket
 `out/<id>.sock` and stopped with this server; a deck server already on that
 socket (`make serve DECK=<id> SOCKET=out/<id>.sock`) is used as is. Other
-paths are files of `STATIC`, then of the dev site (its `pdf/`), then of the
-site.
+paths are files of `STATIC`, then (`serve-dev` only) of the dev site, then of
+the site (their `pdf/`).
 
 ## Overflow
 

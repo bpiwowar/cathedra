@@ -89,7 +89,7 @@ DEPLOY_DEST_DEV ?=
 DEPLOY_PDF      ?= yes
 #@option ZIP_OUT the archive `make zip` writes {$(DESTDIR).zip}
 ZIP_OUT         ?= $(DESTDIR).zip
-#@option COURSE_PORT port of `make serve-course` (index + every deck)
+#@option COURSE_PORT port of `make serve-course` / `make serve-dev` (index + decks)
 COURSE_PORT     ?= 9010
 
 TS       := $(TYPST_SLIDES)
@@ -153,7 +153,9 @@ Maintain the sources
                   of the Makefile
 
 Course site (decks of the schedule + index page)
-  serve-course    dev server: index + every deck on http://localhost:$(COURSE_PORT)
+  serve-course    the production site, live: index + its decks on
+                  http://localhost:$(COURSE_PORT) (no `dev: true` deck or practical)
+  serve-dev       the same for the dev site (with the `dev: true` ones)
   site / site-dev  $(DESTDIR)/ / $(DESTDIR_DEV)/ (dev: with the dev: true decks)
   site-pdf / site-pdf-dev  PDFs of the pdf: true decks into <site>/pdf/
                   (MD5-cached; FORCE=1)
@@ -293,7 +295,7 @@ open-slide:
 # ------------------------------------------------------------ the course site
 # `typst-slides site`: deck list and flags from $(SLIDES_SCHEDULE), the
 # outlines the builds write, $(PRACTICAL_MANIFEST) for the practical links.
-.PHONY: practical practical-manifest site site-dev site-force site-dev-force site-pdf site-pdf-dev deploy deploy-dev zip serve-course
+.PHONY: practical practical-manifest site site-dev site-force site-dev-force site-pdf site-pdf-dev deploy deploy-dev zip serve-course serve-dev
 SITE       := $(TS) site
 SITE_FLAGS  = $(if $(PRACTICAL_MANIFEST),--practicals=$(PRACTICAL_MANIFEST)) $(if $(STATIC),--static=$(STATIC))
 
@@ -349,9 +351,14 @@ zip: site
 
 # The whole course: the index on /, each deck's own dev server (live reload,
 # E…) started on its first request under /<id>/ (socket $(OUT)/<id>.sock);
-# other files from STATIC, then the dev site (its pdf/), then the site.
+# other files from STATIC, then the site (its pdf/). Only what the production
+# site lists: no `dev: true` deck or practical (serve-dev: the dev site).
 serve-course: $(GEN) | practical-manifest
-	$(SITE) serve --port=$(COURSE_PORT) --sockets=$(OUT) $(SITE_FLAGS) --static=$(DESTDIR_DEV) --static=$(DESTDIR)
+	$(SITE) serve --port=$(COURSE_PORT) --sockets=$(OUT) $(SITE_FLAGS) --static=$(DESTDIR)
+
+# serve-course for the dev site: the `dev: true` decks and practicals too
+serve-dev: $(GEN) | practical-manifest
+	$(SITE) serve --dev --port=$(COURSE_PORT) --sockets=$(OUT) $(SITE_FLAGS) --static=$(DESTDIR_DEV) --static=$(DESTDIR)
 
 clean:
 	rm -rf $(OUT) .cache/widgets .cache/images

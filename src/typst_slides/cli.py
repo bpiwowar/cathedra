@@ -514,8 +514,11 @@ def site_serve(
     sockets: Annotated[
         Path, typer.Option(help="where the decks' dev servers listen")
     ] = Path("out"),
+    dev: Annotated[
+        bool, typer.Option(help="the dev site (with the `dev: true` decks)")
+    ] = False,
 ) -> None:
-    """Dev server of the whole course: index + every deck."""
+    """Dev server of the whole course: index + its decks (production or dev)."""
     from .course_server import serve_course
 
     serve_course(
@@ -524,6 +527,7 @@ def site_serve(
         [s.resolve() for s in static or []],
         practicals and practicals.resolve(),
         sockets,
+        dev,
     )
 
 
