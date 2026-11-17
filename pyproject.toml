@@ -43,7 +43,7 @@ convert = ["json5>=0.9"]
 typst-slides = "typst_slides.cli:main"
 
 [project.urls]
-Repository = "https://git.isir.upmc.fr/bpiwowar/slide-app"
+Repository = "https://github.com/bpiwowar/typst-slides"
 
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.6", "pre-commit>=3.7"]
