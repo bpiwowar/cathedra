@@ -44,9 +44,10 @@ jobs:
           # extension-module is given again (else pyo3 links libpython)
           - { os: ubuntu-latest, target: x86_64, manylinux: auto, args: "--features pyo3/extension-module,vendored-openssl" }
           - { os: ubuntu-latest, target: aarch64, manylinux: auto, args: "--features pyo3/extension-module,vendored-openssl" }
-          - { os: macos-14, target: aarch64-apple-darwin }
-          # cross-compiled on Apple silicon (the Intel runners are retired)
-          - { os: macos-14, target: x86_64-apple-darwin }
+          # macos-latest: the numbered images are retired one after the
+          # other (macos-13, then macos-14); Intel cross-compiled on Apple silicon
+          - { os: macos-latest, target: aarch64-apple-darwin }
+          - { os: macos-latest, target: x86_64-apple-darwin }
           - { os: windows-latest, target: x64 }
     steps:
       - uses: actions/checkout@v4
@@ -61,10 +62,11 @@ jobs:
         with:
           target: ${{ matrix.target }}
           manylinux: ${{ matrix.manylinux || '' }}
-          # the vendored OpenSSL's Configure needs IPC::Cmd, missing in the
-          # x86_64 manylinux image (yum); the aarch64 cross image has it
+          # the vendored OpenSSL's Configure needs IPC::Cmd and Time::Piece,
+          # missing in the x86_64 manylinux image (yum); the aarch64 cross
+          # image has them
           before-script-linux: |
-            if command -v yum >/dev/null; then yum install -y perl-IPC-Cmd; fi
+            if command -v yum >/dev/null; then yum install -y perl-IPC-Cmd perl-Time-Piece; fi
           args: --release --out dist ${{ matrix.args || '' }}
       - uses: actions/upload-artifact@v4
         with:
