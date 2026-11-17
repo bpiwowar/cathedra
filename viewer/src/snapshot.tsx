@@ -1,17 +1,17 @@
-// The page tools/snapshots.mjs photographs: one widget at a time, at its
+// The page `typst-slides snapshots` photographs: one widget at a time, at its
 // slot's size, in a given state: props added to its own (`step` among them;
 // without one, the final step). The component also gets `snapshot: true`, to
 // leave out what only makes sense live (a play button…).
 // The picture is taken when the widget is ready: at once for a widget that
 // draws as it mounts; for one registered with `async: true` (it loads data,
 // trains, animates…), when it calls its `onReady` prop. Then the fonts and
-// images must be loaded, and (tools/snapshots.mjs) the network idle.
+// images must be loaded, and (snapshots.py) the network idle.
 import React from "react";
 import { createRoot, type Root } from "react-dom/client";
-import courseWidgets from "course-widgets";
+import { loadCourseWidgets } from "./course-widgets";
 
 type Widget = { component: React.FC<any>; steps?: (props: any) => number; async?: boolean };
-const widgets = courseWidgets as Record<string, Widget>;
+const widgets = (await loadCourseWidgets()) as Record<string, Widget>;
 const slot = document.getElementById("slot")!;
 let root: Root | null = null;
 const frames = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));

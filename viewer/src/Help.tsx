@@ -3,8 +3,6 @@
 // followed inside the panel, with Home and Back; external links open a tab.
 import MarkdownIt from "markdown-it";
 import React from "react";
-// { "README.md": markdown, "docs/x.md": markdown, … }, bundled by build.mjs
-import docs from "virtual:docs";
 import { t } from "./i18n";
 
 const md = new MarkdownIt({ html: false, linkify: true });
@@ -34,7 +32,23 @@ let lastPage = HOME; // reopening H comes back to the page left
 type Section = { page: string; heading: string; anchor?: string; level: number; text: string };
 // (markdown links keep their text: `[text](url)` -> `text`)
 const plainText = (s: string) => s.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/[`*]/g, "");
-const sections: Section[] = Object.entries(docs as Record<string, string>).flatMap(([page, src]) => {
+// { "README.md": markdown, "docs/x.md": markdown, … }: docs.json next to the
+// deck (written by the dev builds of typst-slides), loaded when H opens
+let docs: Record<string, string> = {};
+let sections: Section[] = [];
+
+/** Load docs.json (again: the dev server rewrites it when a page changes). */
+export async function loadDocs() {
+  try {
+    const r = await fetch(`docs.json?t=${Date.now()}`);
+    if (r.ok) docs = await r.json();
+  } catch {
+    // no help pages: the panel says so
+  }
+  sections = toSections(docs);
+}
+
+const toSections = (docs: Record<string, string>): Section[] => Object.entries(docs).flatMap(([page, src]) => {
   const out: Section[] = [{ page, heading: page, level: 0, text: "" }];
   let fence = false;
   for (const line of src.split("\n")) {

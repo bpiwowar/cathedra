@@ -1,7 +1,0 @@
-# slide-app/typst is installed on its own (not part of the course's pnpm
-# workspace): `make setup` runs `pnpm install` here.
-packages: []
-
-# esbuild fetches its platform binary at install.
-allowBuilds:
-  esbuild: true

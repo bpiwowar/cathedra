@@ -4,11 +4,11 @@ import "reveal.js-plugins/chalkboard/plugin.js"; // sets window.RevealChalkboard
 import "reveal.js-plugins/chalkboard/style.css";
 import React from "react";
 import { createRoot, Root } from "react-dom/client";
-// the course's widgets (its widgets/index.ts, aliased by build.mjs)
-import courseWidgets from "course-widgets";
+// the course's widgets (widgets.js, built from its widgets/index.ts)
+import { loadCourseWidgets } from "./course-widgets";
 import { EditChain, editUrl, index, openApp, Outline, StructureBrowser } from "./StructureBrowser";
 import "./structure-browser.css";
-import { Help } from "./Help";
+import { Help, loadDocs } from "./Help";
 import { openAnnotEditor } from "./AnnotEditor";
 import { initMorph, morphUpdate } from "./morph";
 import { devEvent, initExtras } from "./extras";
@@ -24,7 +24,7 @@ showLoading();
 // an animation the number of steps it needs for given props (Reveal fragments).
 export type Widget = { component: React.FC<any>; steps?: (props: any) => number };
 const widgets: Record<string, Widget> = {
-  ...(courseWidgets as Record<string, Widget>),
+  ...((await loadCourseWidgets()) as Record<string, Widget>),
   // #todo("…") on the web (lib/slides.typ): hidden by M
   "todo-note": { component: TodoNote },
   // #svg-object(…): an SVG with its links, hover and scripts (engine-widgets.tsx)
@@ -253,7 +253,7 @@ function openPanel(content: React.ReactElement) {
 // binding, since Reveal's own H (previous slide) would run first otherwise.
 if (outline.root)
   deck.addKeyBinding({ keyCode: 72, key: "H", description: t("key.help") }, () => {
-    if (!panelOpen) openPanel(<Help onClose={closePanel} />);
+    if (!panelOpen) loadDocs().then(() => panelOpen || openPanel(<Help onClose={closePanel} />));
   });
 
 window.addEventListener("keydown", (e) => {

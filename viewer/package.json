@@ -1,5 +1,5 @@
 {
-  "name": "slide-app-typst",
+  "name": "typst-slides-viewer",
   "private": true,
   "type": "module",
   "dependencies": {
@@ -11,11 +11,12 @@
   },
   "devDependencies": {
     "@fortawesome/fontawesome-free": "7.3.1",
-    "@myriaddreamin/typst-ts-node-compiler": "0.8.0-rc3",
     "@types/markdown-it": "14.1.2",
-    "esbuild": "0.25.5",
-    "js-yaml": "4.1.0",
-    "puppeteer-core": "24.10.0"
+    "esbuild": "0.25.5"
   },
-  "description": "slide-app for Typst: Touying decks shown by a Reveal.js viewer"
+  "description": "typst-slides' browser viewer (Reveal.js, SVG pages, widgets); built into the Python package",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch"
+  }
 }

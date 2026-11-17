@@ -1,0 +1,6 @@
+# The viewer is installed on its own: `pnpm install` here.
+packages: []
+
+# esbuild fetches its platform binary at install.
+allowBuilds:
+  esbuild: true
