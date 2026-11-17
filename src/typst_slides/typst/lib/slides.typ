@@ -97,6 +97,45 @@
   ) { " " } else if c.has("base") { plain(c.base) } else { "" }
 }
 
+// In a `context`: the page of the current `#show: allow-breaks` slide (0 its
+// first page, 1 the next…), none on another slide.
+#let break-page() = {
+  let p = here().page()
+  let starts = query(<break-start>)
+  let ends = query(<break-end>)
+  for (i, st) in starts.enumerate() {
+    let a = st.location().page()
+    let b = if i < ends.len() { ends.at(i).location().page() } else { a }
+    if a <= p and p <= b { return p - a }
+  }
+  none
+}
+
+// In a `context`: (heading body, n) of the current slide's title, n > 1 on a
+// continuation (an empty `===`, a page of an allow-breaks slide); none if none.
+#let _slide-title-parts() = {
+  let page = here().page()
+  let hs = query(heading).filter(h => h.location().page() <= page and h.level <= 3)
+  let blank(c) = (
+    c == none
+      or c == []
+      or c == [ ]
+      or (c.has("text") and c.text.trim() == "")
+      or (c.has("children") and c.children.all(blank))
+  )
+  if hs == () or hs.last().level != 3 { return none }
+  let n = 1
+  let i = hs.len() - 1
+  while i >= 0 and hs.at(i).level == 3 and blank(hs.at(i).body) {
+    n += 1
+    i -= 1
+  }
+  if i < 0 or hs.at(i).level != 3 { return none }
+  let k = break-page()
+  if k != none { n += k }
+  (hs.at(i).body, n)
+}
+
 // Emitted on every page (via the footer): the logical slide this page belongs
 // to, its kind (title, section, subsection, slide) and the headings in force.
 // The web build groups pages with the same `slide` into one Reveal <section>,
@@ -111,9 +150,16 @@
       slide: utils.slide-counter.get().first(),
       page: here().page(),
       kind: kind,
+      // the page of an allow-breaks slide (0, 1…), none for another slide
+      cont: if kind == "slide" { break-page() } else { none },
       h1: h(1),
       h2: if kind == "section" { none } else { h(2) },
-      h3: if kind == "slide" { h(3) } else { none },
+      h3: if kind == "slide" {
+        let t = _slide-title-parts()
+        if t == none { h(3) } else {
+          plain(t.at(0)).trim() + if t.at(1) > 1 { " (" + str(t.at(1)) + ")" } else { "" }
+        }
+      } else { none },
       // the "in detail" group of the page (#details): its id, "" on the
       // appendix's title card, none in the talk
       details: {
@@ -308,25 +354,38 @@
 // whose heading is empty (`===` alone) continues the previous one, whose
 // title it shows numbered: `Title (2)`, `Title (3)`…
 #let slide-title() = context {
-  let page = here().page()
-  let hs = query(heading).filter(h => h.location().page() <= page and h.level <= 3)
-  let blank(c) = (
-    c == none
-      or c == []
-      or c == [ ]
-      or (c.has("text") and c.text.trim() == "")
-      or (c.has("children") and c.children.all(blank))
-  )
-  if hs == () or hs.last().level != 3 { return none }
-  let n = 1
-  let i = hs.len() - 1
-  while i >= 0 and hs.at(i).level == 3 and blank(hs.at(i).body) {
-    n += 1
-    i -= 1
-  }
-  if i < 0 or hs.at(i).level != 3 { return none }
-  if n == 1 { hs.at(i).body } else [#hs.at(i).body (#n)]
+  let t = _slide-title-parts()
+  if t == none { none } else if t.at(1) == 1 { t.at(0) } else [#t.at(0) (#t.at(1))]
 }
+
+// How a template shows the slide title (a function of the title): the
+// title repeated on the pages of a `#show: allow-breaks` slide.
+#let _title-block = state("slide-title-block", t => block(below: 0.8em, text(
+  size: 1.25em,
+  weight: "bold",
+  t,
+)))
+#let set-title-block(f) = _title-block.update(_ => f)
+
+// An opt-in slide whose content, if it does not fit, goes on to more pages
+// (beamer's `allowframebreaks`), each titled `Title (2)`, `Title (3)`… and
+// shown by the viewer as a slide of its own. The slide's content in it:
+//   === A long slide
+//   #allow-breaks[
+//     …
+//   ]
+// No steps (`#pause`…) in such a slide.
+#let allow-breaks(body) = touying-set-config((breakable: true), {
+  [#metadata(none)<break-start>]
+  // (in a grid cell, the title block's spacing below is lost: row-gutter)
+  grid(
+    columns: (1fr,),
+    row-gutter: 0.8em,
+    grid.header(repeat: true, context _title-block.get()(slide-title())),
+    body,
+  )
+  [#metadata(none)<break-end>]
+})
 
 // A sidebar slide: a grey column on the left holding the slide title and
 // what goes with it (a sub-heading, the references…), the main content on

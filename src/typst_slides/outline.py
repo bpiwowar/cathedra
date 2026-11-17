@@ -201,11 +201,25 @@ def deck_structure(  # noqa: C901
     groups: list[dict] = []
     for m in sorted(markers, key=lambda m: m["page"]):
         last = groups[-1] if groups else None
-        if last and last["key"] == m["slide"] and last["kind"] == m["kind"]:
+        # the pages of an allow-breaks slide (`cont` 0, 1…) are slides of their own
+        cont = m.get("cont")
+        if (
+            last
+            and last["key"] == m["slide"]
+            and last["kind"] == m["kind"]
+            and last.get("cont") == cont
+        ):
             if m["page"] not in last["pages"]:
                 last["pages"].append(m["page"])
         else:
-            groups.append({"key": m["slide"], "kind": m["kind"], "pages": [m["page"]]})
+            groups.append(
+                {
+                    "key": m["slide"],
+                    "kind": m["kind"],
+                    "pages": [m["page"]],
+                    "cont": cont,
+                }
+            )
     g_of_page = {p: h for h, g in enumerate(groups) for p in g["pages"]}
 
     def rel(f) -> str:

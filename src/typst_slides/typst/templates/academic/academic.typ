@@ -17,6 +17,9 @@
 // [tool.typst-slides] api): checked when a deck compiles.
 #assert-api(3, 4, who: "slides-academic 1.0.0")
 
+// The slide title, as shown above a slide.
+#let title-block(t) = block(below: 0.8em, text(size: 1.25em, weight: "bold", fill: primary, t))
+
 // One slide: the main section › sub-section above, the slide title as the
 // preamble of every step, the page marker and the number below.
 #let slide(config: (:), repeat: auto, setting: body => body, composer: auto, ..bodies) = touying-slide-wrapper(self => {
@@ -193,6 +196,8 @@
         foreground: annot-layer(defaults: annotations),
       ),
       config-common(
+        // the title's look, for the pages of an allow-breaks slide
+        preamble: set-title-block(title-block),
         slide-fn: slide,
         slide-level: 3,
         new-section-slide-fn: new-section-slide,
@@ -207,12 +212,10 @@
       ),
       config-colors(primary: primary, secondary: accent, neutral-light: muted, neutral-lightest: white),
       // the slide title, unless the slide has a #sidebar (which shows it)
-      config-store(subslide-preamble: context if not has-sidebar() { block(below: 0.8em, text(
-        size: 1.25em,
-        weight: "bold",
-        fill: primary,
-        slide-title(),
-      )) }, details-back: if fr [Retour à la diapositive] else [Back to slide]),
+      // (an allow-breaks slide repeats it on each of its pages itself)
+      config-store(subslide-preamble: context if not has-sidebar() and break-page() == none {
+        title-block(slide-title())
+      }, details-back: if fr [Retour à la diapositive] else [Back to slide]),
       ..args,
     )
     body

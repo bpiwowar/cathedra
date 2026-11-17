@@ -67,7 +67,23 @@ the top level: Touying reads it as a slide break (use `—`).
 `make space` puts the canonical blank lines between slides.
 
 The title above a slide (and in a `#sidebar`) is `#slide-title()`: a
-template other than `academic` calls it too.
+template other than `academic` calls it too (and `#set-title-block(f)` to
+give the title's look to the pages below).
+
+### A slide that goes on to more pages
+
+Opt-in, like beamer's `allowframebreaks`: content that does not fit goes on to
+more pages, titled `Title (2)`, `Title (3)`…, each a slide of its own in the
+viewer and the outline. `make check` then reports no overflow for it.
+
+```typst
+=== A long list
+#allow-breaks[
+  - …
+]
+```
+
+No steps (`#pause`, `#only`…) in such a slide.
 
 ## Steps
 
