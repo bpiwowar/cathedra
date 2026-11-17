@@ -98,6 +98,8 @@
   font: "Libertinus Serif",
   math-font: "New Computer Modern Math",
   font-size: 20pt,
+  // the space between the items of a list or enumeration (`-`, `+`)
+  list-spacing: 0.9em,
   lang: "en",
   annotations: (:),
   details-title: auto,
@@ -155,7 +157,8 @@
     show link: set text(fill: link-color)
     show raw: set text(size: 0.9em)
     show strong: set text(fill: primary)
-    set list(marker: (text(fill: accent)[•], text(fill: accent)[‣], [–]))
+    set list(marker: (text(fill: accent)[•], text(fill: accent)[‣], [–]), spacing: list-spacing)
+    set enum(spacing: list-spacing)
     set par(justify: false, spacing: 0.75em)
     set table(stroke: 0.5pt + luma(180), inset: 0.35em)
     show table: set text(size: 0.8em)

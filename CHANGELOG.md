@@ -16,6 +16,8 @@ to in `.slide-app-version` (missing = 1); `make migrate` brings it up to date
 - `#allow-breaks[…]`: an opt-in slide whose content goes on to more pages
   (beamer's `allowframebreaks`), titled `Title (2)`…, each page a slide of
   its own in the viewer and the outline (`cont` in the page markers).
+- `academic(list-spacing: 0.9em)`: more space between list and enumeration
+  items (was Typst's line spacing, 0.65em).
 
 ### Changed
 

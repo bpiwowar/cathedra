@@ -30,6 +30,7 @@ every slide the main section › sub-section above and the slide number below.
 | `title-color` | dark red | course line and title |
 | `font`, `math-font` | Libertinus Serif, New Computer Modern Math | |
 | `font-size` | `20pt` | body text; 16–17pt for denser slides |
+| `list-spacing` | `0.9em` | space between the items of a list (`-`) or an enumeration (`+`); `0.65em` is Typst's (the line spacing). A slide can set its own: `#set list(spacing: 0.6em)` |
 | `lang` | `"en"` | hyphenation, quotes, the viewer's language (`"fr"`, `"en"`), the title of the "in detail" appendix |
 | `details-title` | `auto` | the title of the ["in detail"](details.md) appendix (*In detail*, *Compléments* in French) |
 | `data` | `(:)` | the course's generated data (`ref-links`, `image-cache`, `widget-shots`), read by `common/course.typ` (see [course](course.md#commoncoursetyp)) |
