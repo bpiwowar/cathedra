@@ -5,12 +5,14 @@
 bundled: `react`, `react-dom` and `react/jsx-runtime` are aliased to shims
 (data/viewer-shims/) reading the viewer's own copy from a global (the viewer's
 course-widgets.ts), so that there is one React. Other packages the widgets
-import come from the course's node_modules.
+import come from the course's node_modules: `install_packages` (run by
+`cathedra setup`) installs them when the course has a package.json.
 """
 
 from __future__ import annotations
 
 import hashlib
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -42,6 +44,39 @@ def widget_sources(course: Course) -> list[Path]:
     return sorted(p for p in d.rglob("*") if p.is_file()) if d.is_dir() else []
 
 
+def package_manager(root: Path) -> str | None:
+    """pnpm when the course uses it (lockfile or packageManager) and it is
+    installed, else npm; None without Node."""
+    uses_pnpm = (root / "pnpm-lock.yaml").exists() or '"pnpm@' in (
+        root / "package.json"
+    ).read_text()
+    for name in ("pnpm", "npm") if uses_pnpm else ("npm", "pnpm"):
+        if shutil.which(name):
+            return name
+    return None
+
+
+def install_packages(root: Path) -> None:
+    """Install the packages of the course's package.json (the widgets'
+    imports) when node_modules is missing."""
+    if not (root / "package.json").exists() or (root / "node_modules").exists():
+        return
+    pm = package_manager(root)
+    if pm is None:
+        print("widgets: package.json but no pnpm / npm: install Node")  # noqa: T201
+        return
+    print(f"widgets: {pm} install")  # noqa: T201
+    subprocess.run([pm, "install"], cwd=root, check=True)
+
+
+def missing_packages_hint(root: Path, stderr: str) -> str:
+    if "Could not resolve" not in stderr:
+        return ""
+    if (root / "package.json").exists() and not (root / "node_modules").exists():
+        return "\nthe course's packages are not installed: make setup (or pnpm install)"
+    return "\na package the widgets import: add it to the course (pnpm add <name>)"
+
+
 def build_widgets(
     course: Course, entry: Path, out: Path, outfile: str = "widgets.js"
 ) -> str:
@@ -62,7 +97,8 @@ def build_widgets(
     ]
     run = subprocess.run(args, cwd=course.root, capture_output=True, text=True)
     if run.returncode:
-        raise RuntimeError(run.stderr.strip() or "esbuild failed")
+        err = run.stderr.strip() or "esbuild failed"
+        raise RuntimeError(err + missing_packages_hint(course.root, err))
     if run.stderr.strip():
         print(run.stderr.strip())  # noqa: T201
     js = (out / outfile).read_bytes()

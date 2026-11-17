@@ -101,9 +101,13 @@ def setup(
         Optional[Path], typer.Argument(help="the course's bibliography")
     ] = None,
 ) -> None:
-    """The `cathedra` link to the engine (unless a submodule), the bibliography."""
+    """The `cathedra` link to the engine (unless a submodule), the widgets'
+    packages (package.json), the bibliography."""
+    from .widgets import install_packages
+
     c = course()
     link_engine(c)
+    install_packages(c.root)
     if bib:
         sync(bib)
 

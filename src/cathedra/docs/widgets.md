@@ -145,7 +145,9 @@ imports of them are shims reading the viewer's React). Other packages are
 looked up as Node does, from `widgets/` upwards (the `node_modules` of the
 nearest package: the course's, or the directory above it): a course whose
 widgets use packages (e.g. `d3`) has a `package.json` and installs them
-(`pnpm add d3`). A deck of a course without widgets needs none of this. The
+(`pnpm add d3`); `make setup` (`cathedra setup`) installs them when
+`node_modules` is missing (pnpm if the course uses it, else npm), and a
+build that cannot resolve an import says what to run. A deck of a course without widgets needs none of this. The
 dev server rebuilds and reloads when a widget file changes; `make html`
 bundles them for the site.
 
