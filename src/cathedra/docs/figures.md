@@ -11,9 +11,8 @@ the steps of its slide is a function of the current step.
 #steps("input", "scores", "pick")
 
 #import "figures/predict-next.typ": predict-next
-#align(center, at-step(predict-next))
-#v(1fr)
-#step-captions(
+#step-figure(
+  predict-next,
   input: [shown at step "input"],
   scores: [shown at step "scores"],
   pick: [shown at step "pick"],
@@ -31,6 +30,15 @@ the steps of its slide is a function of the current step.
   n); compare it with `step-no("name")`: `if k >= step-no("scores") { … }`.
 - `#step-captions(name: […], …)`: one caption per named step, in the same
   place (or, in order, `#step-captions([…], […])`: from step 2 on).
+- `#step-figure(fig, ..captions)`: `#at-step(fig)` and `#step-captions(…)`,
+  the figure scaled to the space the captions (and what follows on the
+  slide) leave: no scale factor to tune, on a slide or in a handout. On a
+  slide, room is kept for the tallest caption, so that the figure keeps its
+  size from step to step. `corner: […]` puts content (a mini-map, a legend)
+  in the bottom-right corner of the figure's area, clear of the captions;
+  `max: 150%` caps the enlargement. Without captions, the figure takes what
+  the rest of the slide leaves. `fig-fit(body)` (lib/figures.typ) is the
+  scaling alone, for a figure in a block of known (or `1fr`) height.
 - `#frag("name")[…]`, `step("name")[…]` in `#items`: content from that step on.
 
 A name that `#steps` does not declare stops the compilation with the list of
@@ -93,8 +101,8 @@ with copies of their elements, no pixels:
 `make handout` (`--input handout=1`) keeps the last step of each slide:
 `at-step` gets the last `k`, `step-captions` lists all the captions (small, in
 two columns). When the last step does not tell the whole story, test
-`is-handout` and draw something else (e.g. two steps side by side), scaled
-down if needed: `scale(75%, reflow: true, …)`.
+`is-handout` and draw something else (e.g. two steps side by side); with
+`step-figure`, it is scaled to fit like any figure.
 
 ## Coloured vectors and matrices (`lib/figures.typ`)
 

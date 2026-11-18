@@ -699,6 +699,39 @@
   }
 }
 
+// A step figure, with its captions, taking the rest of the slide: `fig` is
+// a function of the step (as for `at-step`), scaled (`fig-fit`, at most
+// `max`) to the space the captions — and what follows on the slide — leave.
+// On a slide, room is kept for the tallest caption: the figure has the same
+// size at every step. In a handout, the figure shows the last step, above
+// all the captions (two columns). No captions: the figure alone (and what
+// follows the call stays under it).
+// - `captions`: as `step-captions` (named, or in order from `start`)
+// - `caption-align`: of the caption on a slide
+// - `corner`: content in the bottom-right corner of the figure's area (a
+//   mini-map, a legend…), so it never covers the captions
+#let step-figure(fig, start: 2, caption-align: left, gap: 0.6em, max: 150%, corner: none, ..captions) = {
+  let cs = captions.pos() + captions.named().values()
+  block(width: 100%, height: 1fr, {
+    align(center + top, context fig-fit(fig(current-step()), max: max))
+    if corner != none { place(bottom + right, corner) }
+  })
+  if cs.len() > 0 {
+    v(gap, weak: true)
+    let all = step-captions(start: start, ..captions)
+    layout(size => if is-handout {
+      // measured at the page width, the captions are in one column (of the
+      // right width: the height is free); half that height (and a line)
+      // holds them in the two columns of `step-captions`
+      let h = measure(all, width: size.width).height
+      block(width: 100%, height: h / 2 + 1em, all)
+    } else {
+      let h = calc.max(..cs.map(c => measure(c, width: size.width).height))
+      block(width: 100%, height: h, align(caption-align, all))
+    })
+  }
+}
+
 // A list whose items appear in steps: each item is content, or `step(n)[…]`
 // for one that appears at step n (a number or a name). Unlike a step around a `- item`, a hidden
 // item keeps its place and its marker is hidden with it, so the list does

@@ -34,6 +34,19 @@
   if m < 1e-6 { 1 } else { m }
 }
 
+// ----------------------------------------------------------------- fitting
+// `body` scaled to fit the available space (as `layout` gives it), its
+// aspect ratio kept; at most `max` (100%: never enlarged). In a block of
+// height 1fr, a figure takes what the rest of the slide leaves
+// (`step-figure`, lib/slides.typ).
+#let fig-fit(body, max: 150%) = layout(size => {
+  let m = measure(body)
+  // an empty figure, or a measuring pass (Touying): as is
+  if m.width == 0pt or m.height == 0pt { return body }
+  let r = calc.min(max / 100%, size.width / m.width, size.height / m.height)
+  if r == 1 { body } else { scale(r * 100%, reflow: true, body) }
+})
+
 // ------------------------------------------------------------------- cells
 // A vector as a row (or column) of coloured cells.
 // - palette: a name of `palettes` or a function (value, range) -> colour

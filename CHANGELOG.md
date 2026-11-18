@@ -6,6 +6,16 @@ to in `.slide-app-version` (missing = 1); `make migrate` brings it up to date
 (see [docs/upgrading.md](docs/upgrading.md)). The format follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## Unreleased
+
+### Added
+
+- `step-figure(fig, ..captions)` (lib/slides.typ): a step figure and its
+  captions, the figure scaled to the space the slide leaves (the same at
+  every step; in a handout, above all the captions), with an optional
+  `corner:` (e.g. a mini-map); no per-figure scale factor for slides and
+  handouts. `fig-fit(body, max: 150%)` (lib/figures.typ): the scaling alone.
+
 ## API 4 (typst-slides 0.1.0)
 
 A clone of a course compiles with plain `typst compile`: nothing it needs is
