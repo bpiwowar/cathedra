@@ -139,6 +139,19 @@ class DeckCompiler:
         return Compilation(diags, [Path(p) for p in r.dependencies], r.document)
 
 
+def query_file(main: Path, selector: str, inputs: dict[str, str]) -> list:
+    """Compile a standalone Typst file (its directory as the root, packages
+    downloaded as needed) and return the values of `selector`'s metadata.
+    Raises RuntimeError with the errors if it does not compile."""
+    main = Path(main)
+    r = _native.Compiler(str(main.parent), str(main), [str(FONTS)], inputs).compile()
+    if r.document is None:
+        raise RuntimeError(
+            "\n".join(_clean(d.text) for d in r.diagnostics if d.severity == "error")
+        )
+    return json.loads(r.document.query(selector, "value"))
+
+
 def evict_cache(max_age: int = 10) -> None:
     """Drop the memoized results unused for `max_age` compilations."""
     _native.evict_cache(max_age)

@@ -4,15 +4,24 @@ Every top-level `#let` of lib/*.typ and templates/*.typ, its signature and
 the comment block right above it (no blank line in between). A banner comment
 (`// ---- name`) starts a group; the first comment block of a file, followed
 by a blank line, describes the file. Names starting with `_` are private.
+
+Doc comments in tidy's style (`///`, as tinymist shows them on hover) are
+parsed by tidy itself (apidoc.typ, compiled in-process): a description, one
+`///` comment above each parameter, `-> type` for the types; they give the
+parameter list. Plain `//` comments are the description alone. Without tidy
+(e.g. offline on the first build), every comment is read as plain text.
 """
 
 from __future__ import annotations
 
 import os
 import re
+import sys
 from pathlib import Path
 
 from .paths import TYPST
+
+TIDY_DRIVER = Path(__file__).with_name("apidoc.typ")
 
 API_SOURCES = ["lib", "templates"]
 _BANNER = re.compile(r"^//\s*-{4,}\s*(.*)$")
@@ -57,7 +66,7 @@ def _prose(lines: list[str]) -> str:
     code = False
     item = False
     for raw in lines:
-        line = re.sub(r"^// ?", "", raw)
+        line = re.sub(r"^///? ?", "", raw)
         if line.strip() == "":
             item = False
         elif not code and re.match(r"^\s?[-+] \S", line):
@@ -81,7 +90,76 @@ def _prose(lines: list[str]) -> str:
     return re.sub(r" +\n", "\n", "".join(out)).strip()
 
 
-def _file_api(rel: str, src: str, heading: str | None = None) -> str:
+def tidy_docs(sources: dict[str, str]) -> dict[str, dict[str, dict]]:
+    """{file: {name: tidy's entry of that function or variable}} for the
+    `///` doc comments of `sources` ({file: its text}); {} (with a warning)
+    if tidy cannot run."""
+    from .engine import query_file
+
+    try:
+        modules = query_file(TIDY_DRIVER, "<api>", sources)
+    except Exception as e:  # no network for the package, a parse error…
+        print(f"API index: tidy failed, plain comments only ({e})", file=sys.stderr)  # noqa: T201
+        return {}
+    out: dict[str, dict[str, dict]] = {}
+    for m in modules:
+        mod = m["module"]
+        entries = {v["name"]: v for v in mod.get("variables", [])}
+        entries.update({f["name"]: f for f in mod.get("functions", [])})
+        out[m["file"]] = entries
+    return out
+
+
+def _types(types: list[str] | None) -> str:
+    return " | ".join(types or [])
+
+
+def _tidy_text(text: str) -> str:
+    """A tidy description (lines as written after `///`) -> markdown."""
+    return _prose(["//" + line for line in text.split("\n")])
+
+
+def _tidy_api(entry: dict) -> list[str]:
+    """The description, parameters and result of a tidy entry."""
+    out = []
+    if entry.get("description", "").strip():
+        out.append(_tidy_text(entry["description"]))
+    params = []
+    for name, arg in (entry.get("args") or {}).items():
+        desc = arg.get("description", "").strip()
+        types = _types(arg.get("types"))
+        if not desc and not types:
+            continue
+        head = f"- `{name}`"
+        if types:
+            head += f" `{types}`"
+        if "default" in arg:
+            head += f" (default `{arg['default']}`)"
+        params.append(head + (": " + _tidy_text(desc) if desc else ""))
+    if params:
+        out.append("**Parameters**\n\n" + "\n".join(params))
+    result = _types(
+        entry.get("return-types") or ([entry["type"]] if entry.get("type") else None)
+    )
+    if result:
+        out.append(f"**Result** `{result}`")
+    return out
+
+
+def _signature(name: str, text: str) -> str:
+    """`name(…)` from the source from its "(", on one line, without the
+    comments (the `///` of the parameters)."""
+    start = text.index("(")
+    params = text[start : _closing(text, start)]
+    params = re.sub(r"(?m)^\s*//.*\n?", "", params)
+    sig = re.sub(r"\s*\n\s*", " ", params)
+    return name + re.sub(r",\s*\)$", ")", re.sub(r"^\(\s+", "(", sig))
+
+
+def _file_api(
+    rel: str, src: str, heading: str | None = None, tidy: dict | None = None
+) -> str:
+    tidy = tidy or {}
     lines = src.split("\n")
     out = [f"## {heading or rel}"]
     comment: list[str] = []
@@ -108,17 +186,19 @@ def _file_api(rel: str, src: str, heading: str | None = None) -> str:
             intro = False
             name = m.group(1)
             if m.group(2) == "(":
-                text = "\n".join(lines[i:])
-                start = text.index("(")
-                sig = re.sub(r"\s*\n\s*", " ", text[start : _closing(text, start)])
-                sig = name + re.sub(r",\s*\)$", ")", re.sub(r"^\(\s+", "(", sig))
+                sig = _signature(name, "\n".join(lines[i:]))
             else:
                 value = line[line.index("=") + 1 :].strip()
                 short = len(value) <= 70 and not value.endswith(("(", "{"))
                 sig = f"{name} = {value}" if short else name
             out += [f"#### {name}", "```typst\n#" + sig + "\n```"]
-            if comment:
-                out.append(_prose(comment))
+            if name in tidy and any(c.startswith("///") for c in comment):
+                out += _tidy_api(tidy[name])
+            elif comment:
+                # (without tidy, `///` comments as text, less the `-> type`)
+                out.append(
+                    _prose([c for c in comment if not re.match(r"^///\s*->", c)])
+                )
             out.append(f"*{rel}:{i + 1}*")
             comment = []
             continue
@@ -143,18 +223,22 @@ def api_markdown(
         if common and common.is_dir()
         else []
     )
+    sources = {f: (engine / f).read_text() for f in api_files(engine)}
+    sources.update({f"common/{f}": (common / f).read_text() for f in own})  # type: ignore[operator]
+    tidy = tidy_docs(sources)
     parts = [
         "# API index",
         f'Everything the engine\'s Typst files define (`#import "{course_typ}": *` '
         "brings it in scope), generated from the comments above each `#let`"
         + (", then what the course's `common/` adds" if own else "")
         + ". Type a name in the search box (/) to find it.",
-        *(_file_api(f, (engine / f).read_text()) for f in api_files(engine)),
+        *(_file_api(f, sources[f], tidy=tidy.get(f)) for f in api_files(engine)),
         *(
             _file_api(
                 f"common/{f}",
-                (common / f).read_text(),  # type: ignore[operator]
+                sources[f"common/{f}"],
                 f"common/{f} (the course)",
+                tidy.get(f"common/{f}"),
             )
             for f in own
         ),
