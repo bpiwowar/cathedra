@@ -168,7 +168,7 @@ Course site (decks of the schedule + index page)
                   (MD5-cached; FORCE=1)
   site-force / site-dev-force  the same, from an empty directory
   deploy / deploy-dev  site + PDFs, rsync to DEPLOY_DEST(_DEV) (DRY=1: rsync -n;
-                  DEPLOY_PDF=no)
+                  DEPLOY_PDF=no); a missing DEPLOY_DEST: asks to create it
   zip             $(ZIP_OUT) (the site, PDFs excluded)
 endef
 export HELP_TEXT
@@ -338,17 +338,44 @@ site-pdf: $(GEN) snapshots
 site-pdf-dev: $(GEN) snapshots
 	@$(SITE) pdf --dev --out=$(DESTDIR_DEV)/pdf $(if $(FORCE),--force)
 
+# The deploy destination $(1) (host:dir or a local dir) must exist: rsync only
+# creates its last level. If it does not, ask before creating it (mkdir -p,
+# over ssh for host:dir); never without a yes on the terminal, and never with
+# DRY=1. Checked before the build, so a missing directory fails fast.
+define check-deploy-dest
+	@dest='$(1)'; \
+	case "$$dest" in \
+	  [!/]*:*) host="$${dest%%:*}"; dir="$${dest#*:}"; where="$$dest (on $$host)"; \
+	           run() { ssh "$$host" "$$1"; } ;; \
+	  *)       host=; dir="$$dest"; where="$$dest"; run() { sh -c "$$1"; } ;; \
+	esac; \
+	[ -n "$$dir" ] || exit 0; \
+	run "test -d '$$dir'"; st=$$?; \
+	[ $$st -eq 0 ] && exit 0; \
+	[ $$st -eq 255 ] && { echo "ERROR: cannot reach $$host to check $$dir"; exit 1; }; \
+	echo "The deploy directory $$where does not exist."; \
+	if [ -n "$(DRY)" ]; then echo "(DRY=1: not creating it; rsync -n may fail)"; exit 0; fi; \
+	if ! ( : </dev/tty ) 2>/dev/null; then echo "ERROR: no terminal to ask; create it by hand"; exit 1; fi; \
+	printf 'Create it (mkdir -p)? [y/N] ' >/dev/tty; read ans </dev/tty; \
+	case "$$ans" in \
+	  [yY]|[yY][eE][sS]) run "mkdir -p '$$dir'" && echo "Created $$where" ;; \
+	  *) echo "Not created: deploy stopped."; exit 1 ;; \
+	esac
+endef
+
 # `practical` first (it may drop files the site copies), then the site and its
 # PDFs in a sub-make, checked for local absolute paths, then rsync --delete.
 # DRY=1: rsync -n, nothing is sent.
 deploy: practical
 	@test -n "$(DEPLOY_DEST)" || { echo "ERROR: DEPLOY_DEST is not set — define it in the course Makefile, e.g.  DEPLOY_DEST := host:/var/www/course/"; exit 1; }
+	$(call check-deploy-dest,$(DEPLOY_DEST))
 	@$(MAKE) --no-print-directory site $(if $(filter no,$(DEPLOY_PDF)),,site-pdf)
 	@$(SITE) check --out=$(DESTDIR)
 	rsync --delete -az$(if $(DRY),n)v $(DESTDIR)/ $(DEPLOY_DEST)
 
 deploy-dev: practical
 	@test -n "$(DEPLOY_DEST_DEV)" || { echo "ERROR: DEPLOY_DEST_DEV is not set — define it in the course Makefile, e.g.  DEPLOY_DEST_DEV := host:/var/www/course-dev/"; exit 1; }
+	$(call check-deploy-dest,$(DEPLOY_DEST_DEV))
 	@$(MAKE) --no-print-directory site-dev $(if $(filter no,$(DEPLOY_PDF)),,site-pdf-dev)
 	@$(SITE) check --out=$(DESTDIR_DEV)
 	rsync --delete -az$(if $(DRY),n)v $(DESTDIR_DEV)/ $(DEPLOY_DEST_DEV)

@@ -97,7 +97,11 @@ course](course.md)), or on the command line (`make serve DECK=lecture-2`):
   `make snapshots`). A PDF is compiled again only when the MD5 of what its
   last compilation read changed: `.cache/pdf/`; `FORCE=1`
   compiles them all.
-- `make deploy` / `deploy-dev`: the `practical` hook, the site and its PDFs
+- `make deploy` / `deploy-dev`: first, the destination directory must exist
+  (rsync only creates its last level): if it does not, the deploy asks on the
+  terminal whether to create it (`mkdir -p`, over ssh for `host:dir`), and
+  stops on anything but yes; never created silently, nor with `DRY=1`. Then
+  the `practical` hook, the site and its PDFs
   (not with `DEPLOY_PDF=no`), then `rsync --delete` to `DEPLOY_DEST` /
   `DEPLOY_DEST_DEV` (an error if unset). `DRY=1` runs `rsync -n`: what would
   change, nothing sent.
