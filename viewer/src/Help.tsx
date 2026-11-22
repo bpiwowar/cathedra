@@ -3,9 +3,16 @@
 // followed inside the panel, with Home and Back; external links open a tab.
 import MarkdownIt from "markdown-it";
 import React from "react";
+import { highlight } from "./highlight";
 import { t } from "./i18n";
 
-const md = new MarkdownIt({ html: false, linkify: true });
+const md = new MarkdownIt({ html: false, linkify: true, highlight });
+// code blocks: a Copy button (handled by the panel's onClick)
+const fence = md.renderer.rules.fence!;
+md.renderer.rules.fence = (tokens, idx, options, env, self) =>
+  `<div class="code-block"><button type="button" class="code-copy">${t("help.copy")}</button>` +
+  fence(tokens, idx, options, env, self) +
+  "</div>";
 // headings get ids, so that `page.md#anchor` links land on them
 const slug = (s: string) => s.toLowerCase().replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-");
 md.core.ruler.push("heading_ids", (state) => {
@@ -116,6 +123,18 @@ export function Help(props: { onClose: () => void }) {
   );
 
   function onClick(e: React.MouseEvent) {
+    const copy = (e.target as HTMLElement).closest<HTMLButtonElement>("button.code-copy");
+    if (copy) {
+      const code = copy.parentElement?.querySelector("pre code")?.textContent ?? "";
+      navigator.clipboard.writeText(code).then(
+        () => {
+          copy.textContent = t("help.copied");
+          setTimeout(() => (copy.textContent = t("help.copy")), 1200);
+        },
+        () => (copy.textContent = t("help.copyFailed")),
+      );
+      return;
+    }
     const a = (e.target as HTMLElement).closest("a");
     const href = a?.getAttribute("href");
     if (!a || !href) return;

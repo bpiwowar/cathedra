@@ -13,7 +13,7 @@
 | **O** | the slides that overflow (Touying's warnings), to go to or edit; **Esc** still shows the overview |
 | **W** | the slides marked work in progress (`#todo` 🚧) or to check (`#to-check` 👀), to go to, edit, or change (**S**) |
 | **shift-W** | change the slide's work state (work in progress, to check, done) and its note, written into the source (dev server); a click on the note does the same |
-| **Z** | open the Zotero item(s) of the slide's figures and references (dev server; a picker when several) |
+| **Z** | open the Zotero item(s) of the slide's figures and references (dev server; always a picker first) |
 | **I** | open the slide's ["in detail" slides](details.md); in them, **I** or **Esc** goes back |
 | **H** | this help (dev server); `/` searches it, the API index lists every function |
 | **shift-H** | back to the course index |
@@ -48,9 +48,9 @@ heading; the deck then rebuilds.
 ## Zotero (Z)
 
 In the dev server, an `#img(…, origin: "zotero://…")` and the icon of a
-`#reference` are links to Zotero. **Z** opens the one of the step shown,
-or lists them (the reference's text, or *figure* and the item key) to pick
-with ↑ ↓ / 1–9 and Enter.
+`#reference` are links to Zotero. **Z** lists those of the step shown (the
+reference's text, or *figure* and the item key), even when there is one,
+to pick with ↑ ↓ / 1–9 and Enter: Zotero opens only on that choice.
 
 ## Language
 

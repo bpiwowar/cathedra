@@ -301,7 +301,7 @@ export function openZotero() {
   if (!ctx.outline().root) return ctx.flash(t("zotero.devOnly"));
   const links = slideZoteroLinks(ctx.deck.getCurrentSlide());
   if (!links.length) return ctx.flash(t("zotero.none"));
-  if (links.length === 1) return ctx.openApp(links[0].href);
+  // always the picker, even for one item: Z never opens Zotero unasked
   ctx.openPanel(
     <Picker
       title={t("zotero.pick")}

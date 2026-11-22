@@ -78,8 +78,8 @@ are never typed by hand.
 - **Figures from papers.** A Zotero image annotation, i.e. a region selected
   in a PDF, can be the `origin:` of an `#img`. The picture Zotero rendered is
   copied into the course, and the image keeps a link back to the annotation.
-- **Z** in the dev server opens the Zotero item of the slide's references
-  and figures, with a picker when there are several.
+- **Z** in the dev server lists the Zotero items of the slide's references
+  and figures (a picker, even for one), and opens the one picked.
 
 ## Without cathedra
 
