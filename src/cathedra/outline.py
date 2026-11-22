@@ -240,6 +240,25 @@ def deck_structure(  # noqa: C901
         ):
             k += 1
         cand = statics[k] if k < len(statics) else None
+        if m["kind"] == "slide" and not card:
+            want = _norm(title_)
+            if not want and cand and _norm(cand["text"]):
+                # a slide no `===` opened (content between the theme and the
+                # title slide, or after a section heading): it has no source
+                # heading, and must not take the next one
+                return None
+            if want and cand and _norm(cand["text"]) != want:
+                # the scan and the document disagree here: the next heading of
+                # this title, if any, rather than shifting all those after
+                for k2 in range(k + 1, len(statics)):
+                    s = statics[k2]
+                    if (
+                        s["level"] == level
+                        and not s.get("details")
+                        and _norm(s["text"]) == want
+                    ):
+                        k, cand = k2, s
+                        break
         prev = state["prev"]
         if (
             m["kind"] == "slide"

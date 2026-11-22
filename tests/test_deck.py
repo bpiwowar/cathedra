@@ -101,3 +101,25 @@ def test_index_page(course, course_dir):
     )
     assert '<a href="demo/">The demo</a>' in page
     assert 'href="pdf/demo.pdf"' in page and "First practical" in page
+
+
+def test_outline_sources_after_untitled_slide(course, course_dir):
+    """Content between the theme and the title slide opens a slide with no
+    heading: it must not take the first `===` as its source (shifting every
+    slide after it)."""
+    from cathedra.outline import compile_outlines
+
+    deck = course.deck_file("demo")
+    src = deck.read_text()
+    deck.write_text(src.replace("#title-slide()", "#synopsis[About.]\n#title-slide()"))
+    [(_, outline)] = compile_outlines(course, [{"id": "demo", "file": deck}])
+    lines = deck.read_text().split("\n")
+
+    def walk(n):
+        for c in n.get("children") or []:
+            yield c
+            yield from walk(c)
+
+    slides = {n["title"]: n["src"] for n in walk(outline) if n["kind"] == "slide"}
+    steps = slides["A slide with steps"]
+    assert lines[steps["line"] - 1] == "=== A slide with steps"
