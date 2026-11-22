@@ -179,6 +179,65 @@ def _title_of(m: dict, info_title: str | None) -> str | None:
     return info_title or "Title"
 
 
+def slug(title: str | None) -> str:
+    s = unicodedata.normalize("NFKD", title or "")
+    s = "".join(c for c in s if not unicodedata.combining(c)).lower()
+    s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")[:60]
+    return s.rstrip("-")
+
+
+def layout(outline: dict, count: int):
+    """Reveal layout, as slide-app: a main section (`=`) is a vertical
+    stack (its title card first), slides outside any section stand alone."""
+    stack_of: list[int | None] = [None] * count
+    nodes: list[dict] = []
+
+    def walk(n: dict, stack: int | None) -> None:
+        if n.get("g") is not None:
+            stack_of[n["g"]] = stack
+            nodes.append(n)
+        for c in n.get("children") or []:
+            walk(c, n["g"] if n.get("kind") == "section" else stack)
+
+    for n in outline["children"]:
+        walk(n, n["g"] if n.get("kind") == "section" else None)
+    pos: list[dict] = []
+    h = -1
+    for g in range(count):
+        stack = stack_of[g]
+        prev = stack_of[g - 1] if g > 0 else "none"
+        if stack is not None and stack == prev:
+            pos.append({"h": h, "v": pos[g - 1]["v"] + 1})
+        else:
+            h += 1
+            pos.append({"h": h, "v": 0})
+    for n in nodes:
+        n.update(pos[n["g"]])
+    return nodes, pos, stack_of
+
+
+def slide_ids(nodes: list[dict], count: int) -> list[str]:
+    """Stable slide ids, from the titles: the URL says #/marks rather than
+    #/3/1 (an untitled slide takes the previous title, -2, -3…)."""
+    ids: list[str] = []
+    taken: set[str] = set()
+    last = "slide"
+    for g in range(count):
+        ns = [x for x in nodes if x["g"] == g]
+        s = slug(ns[-1].get("title") if ns else "")
+        good = bool(s) and not s[0].isdigit()
+        if good:
+            last = s
+        base = s if good else last
+        i, k = base, 2
+        while i in taken:
+            i = f"{base}-{k}"
+            k += 1
+        taken.add(i)
+        ids.append(i)
+    return ids
+
+
 def deck_structure(  # noqa: C901
     course: Course,
     items: list,
@@ -370,6 +429,11 @@ def deck_structure(  # noqa: C901
         if d is not None and g not in d["refs"]:
             d["refs"].append(g)
     outline["details"] = details
+    # where each slide is in the deck (h, v) and its address (#/<id>)
+    nodes, _, _ = layout(outline, len(groups))
+    ids = slide_ids(nodes, len(groups))
+    for n in nodes:
+        n["id"] = ids[n["g"]]
     return groups, outline
 
 

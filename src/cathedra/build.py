@@ -25,11 +25,11 @@ import os
 import re
 import shutil
 import time
-import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import outline as outline_mod
+from .outline import slug  # noqa: F401 (re-exported)
 from .apidoc import api_markdown
 from .engine import Compilation, DeckCompiler, Pages
 from .paths import VIEWER, Course, deck_title, doc_files
@@ -92,13 +92,6 @@ def warn(msg: str) -> None:
     import sys
 
     print(msg, file=sys.stderr, flush=True)  # noqa: T201
-
-
-def slug(title: str | None) -> str:
-    s = unicodedata.normalize("NFKD", title or "")
-    s = "".join(c for c in s if not unicodedata.combining(c)).lower()
-    s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")[:60]
-    return s.rstrip("-")
 
 
 def json_dump(value) -> str:
@@ -231,8 +224,8 @@ class DeckBuild:
         outline["overflows"] = overflows([d.text for d in comp.warnings], groups)
         self.outline = outline
 
-        nodes, pos, stack_of = self._layout(outline, groups)
-        ids = self._ids(nodes, groups)
+        nodes, pos, stack_of = outline_mod.layout(outline, len(groups))
+        ids = outline_mod.slide_ids(nodes, len(groups))
         types_of: dict[int, list[str]] = {}
         for n in nodes:
             cur = types_of.setdefault(n["g"], [])
@@ -310,56 +303,6 @@ class DeckBuild:
             + f" ({(time.perf_counter() - t0) * 1000:.0f} ms, SVG pages {svg_ms:.0f} ms)"
         )
         return result
-
-    def _layout(self, outline: dict, groups: list[dict]):
-        """Reveal layout, as slide-app: a main section (`=`) is a vertical
-        stack (its title card first), slides outside any section stand alone."""
-        stack_of: list[int | None] = [None] * len(groups)
-        nodes: list[dict] = []
-
-        def walk(n: dict, stack: int | None) -> None:
-            if n.get("g") is not None:
-                stack_of[n["g"]] = stack
-                nodes.append(n)
-            for c in n.get("children") or []:
-                walk(c, n["g"] if n.get("kind") == "section" else stack)
-
-        for n in outline["children"]:
-            walk(n, n["g"] if n.get("kind") == "section" else None)
-        pos: list[dict] = []
-        h = -1
-        for g in range(len(groups)):
-            stack = stack_of[g]
-            prev = stack_of[g - 1] if g > 0 else "none"
-            if stack is not None and stack == prev:
-                pos.append({"h": h, "v": pos[g - 1]["v"] + 1})
-            else:
-                h += 1
-                pos.append({"h": h, "v": 0})
-        for n in nodes:
-            n.update(pos[n["g"]])
-        return nodes, pos, stack_of
-
-    def _ids(self, nodes: list[dict], groups: list[dict]) -> list[str]:
-        """Stable slide ids, from the titles: the URL says #/marks rather than
-        #/3/1 (an untitled slide takes the previous title, -2, -3…)."""
-        ids: list[str] = []
-        taken: set[str] = set()
-        last = "slide"
-        for g in range(len(groups)):
-            ns = [x for x in nodes if x["g"] == g]
-            s = slug(ns[-1].get("title") if ns else "")
-            good = bool(s) and not s[0].isdigit()
-            if good:
-                last = s
-            base = s if good else last
-            i, k = base, 2
-            while i in taken:
-                i = f"{base}-{k}"
-                k += 1
-            taken.add(i)
-            ids.append(i)
-        return ids
 
     def _skeleton(self, groups, widgets, ids, types_of, pos, stack_of):
         """The <section>s: structure = sections, step pages, widget ids and

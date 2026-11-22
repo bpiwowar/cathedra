@@ -292,8 +292,14 @@ def index_html(  # noqa: C901
             sub = outline_items(c, rate, href)
             subs = f"<ul>{''.join(sub)}</ul>" if sub else ""
             title = esc(c["title"])
-            if href is not None and _number(c.get("g")):
-                title = f'<a href="{esc(href)}#/{c["g"]}">{title}</a>'
+            # the slide's id (#/marks); #/<n> would be the n-th *stack*
+            at = c.get("id") or (
+                f"{c['h']}/{c['v']}"
+                if _number(c.get("h")) and _number(c.get("v"))
+                else None
+            )
+            if href is not None and at:
+                title = f'<a href="{esc(href)}#/{esc(at)}">{title}</a>'
             out.append(
                 f'<li class="outline-{c["kind"]}"><span class="outline-title">{title}</span>{time}{summary}{subs}</li>'
             )
