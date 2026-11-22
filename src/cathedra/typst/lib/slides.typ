@@ -216,16 +216,17 @@
   optional: (0xf219, "diamond"),
   practical: (0xf5fc, "laptop-code"),
   todo: (0xf85e, "person-digging"),
+  check: (0xf06e, "eye"),
 )
 
 /// The default display of a slide's types: a small grey icon for each
-/// (`todo` left out: `#todo` draws its own note).
+/// (`todo` and `check` left out: `#todo` / `#to-check` draw their own note).
 /// -> content
 #let slide-type-badge(
   /// The slide's types, in order, without duplicates. -> array
   types,
 ) = {
-  let shown = types.filter(t => t != "todo")
+  let shown = types.filter(t => t not in ("todo", "check"))
   set text(size: 0.9em, fill: muted)
   shown
     .map(t => if t in slide-type-icons {
@@ -773,28 +774,44 @@
   )
 }
 
-/// Work in progress: a note on what is left to do. Marks
-/// the slide `todo`; drawn as a red note in the top-right corner, unless
-/// compiled with `--input todo=0` (a PDF for the students). On the web the
-/// note is an HTML widget (`todo-note`), so M can hide it during the talk.
-#let todo(note) = {
-  slide-type("todo")
+// The note of `#todo` / `#to-check`: the slide gets the type `kind`; a
+// note in the top-right corner (web: the `todo-note` widget, hidden by M),
+// left out of the PDF compiled with `--input todo=0`.
+#let _work-note(kind, icon, color, fill, note) = {
+  slide-type(kind)
   if is-web {
     place(top + right, dy: -1.2em, float: false, interactive(
       "todo-note",
       width: 14cm,
       height: 1.2em,
-      props: (note: plain(note)),
+      props: (note: plain(note), kind: kind),
     ))
   } else if sys.inputs.at("todo", default: "1") != "0" {
     place(top + right, dy: -1.2em, float: false, box(
-      fill: rgb("#fff0f0"),
-      stroke: 0.8pt + rgb("#cc0000"),
+      fill: fill,
+      stroke: 0.8pt + color,
       radius: 3pt,
       inset: 0.3em,
-      text(size: 0.5em, fill: rgb("#cc0000"))[🚧 #note],
+      text(size: 0.5em, fill: color)[#icon #note],
     ))
   }
+}
+
+/// Work in progress: a note on what is left to do (optional). Marks
+/// the slide `todo`; drawn as a red note in the top-right corner, unless
+/// compiled with `--input todo=0` (a PDF for the students). On the web the
+/// note is an HTML widget (`todo-note`), so M can hide it during the talk.
+#let todo(..note) = {
+  let n = note.pos().at(0, default: [work in progress])
+  _work-note("todo", "🚧", rgb("#cc0000"), rgb("#fff0f0"), n)
+}
+
+/// To check: a slide written (or rewritten) that its author has not yet
+/// reviewed. Marks the slide `check`; drawn as an amber note, like `#todo`
+/// (same `--input todo=0`, same M on the web). The note can be empty.
+#let to-check(..note) = {
+  let n = note.pos().at(0, default: [to check])
+  _work-note("check", "👀", rgb("#a35a00"), rgb("#fff6e0"), n)
 }
 
 /// One caption per step, in the same place. Named, one per step name:

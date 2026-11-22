@@ -6,6 +6,8 @@ identity: a page that reconnects to another server reloads), `errors`,
 (a slide, from VS Code) and `reload` (new widget code). Other routes:
 
 - POST /annot {page, key, values}: shift-O wrote an annotation's place;
+- POST /work {g, state, note?}: a slide's work state (#todo / #to-check /
+  none, work.py), from the viewer (click on the note, shift-W, W then S);
 - GET /goto?file=<path>&line=<n>: move the open decks to that slide;
 - everything else: the files of out/<deck>/ (no caching).
 
@@ -87,6 +89,14 @@ class DevServer:
                 body.get("page"), body.get("key"), body.get("values")
             )
         except Exception as e:  # the editor shows the message
+            r = {"error": str(e)}
+        return web.json_response(r, status=400 if "error" in r else 200)
+
+    async def work(self, request: web.Request) -> web.Response:
+        try:
+            body = await request.json()
+            r = self.deck.set_work(body.get("g"), body.get("state"), body.get("note"))
+        except Exception as e:  # the viewer shows the message
             r = {"error": str(e)}
         return web.json_response(r, status=400 if "error" in r else 200)
 
@@ -172,6 +182,7 @@ async def _serve(server: DevServer, port: int | None, socket: str | None) -> Non
     app = web.Application(client_max_size=4 * 1024**2)
     app.router.add_get("/events", server.events)
     app.router.add_post("/annot", server.annot)
+    app.router.add_post("/work", server.work)
     app.router.add_get("/goto", server.goto)
     app.router.add_get("/{path:.*}", server.static)
     runner = web.AppRunner(app, handle_signals=False, shutdown_timeout=0.5)

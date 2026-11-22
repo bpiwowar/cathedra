@@ -13,7 +13,7 @@ What you reach for while writing a slide. **/** searches every page; the
 | `#allow-breaks[…]` | a slide that goes on to more pages |
 | `#sidebar[side][main]` | a grey column with the title on the left |
 | `#synopsis[…]`, `#module-meta(minutes: 10, …)` | for the outline and the index, never shown |
-| `#slide-type("optional")`, `#todo("…")` | [slide types and todo markers](slide-types.md) |
+| `#slide-type("optional")`, `#todo("…")`, `#to-check()` | [slide types and todo markers](slide-types.md) |
 
 More: [writing slides](authoring.md).
 

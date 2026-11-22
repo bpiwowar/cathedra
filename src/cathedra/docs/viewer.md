@@ -11,6 +11,8 @@
 | **shift-E** | the `#include` chain down to the slide (dev server) |
 | **shift-O** | move an annotation's label, written into the source (dev server, see [annotations](annotations.md)) |
 | **O** | the slides that overflow (Touying's warnings), to go to or edit; **Esc** still shows the overview |
+| **W** | the slides marked work in progress (`#todo` 🚧) or to check (`#to-check` 👀), to go to, edit, or change (**S**) |
+| **shift-W** | change the slide's work state (work in progress, to check, done) and its note, written into the source (dev server); a click on the note does the same |
 | **Z** | open the Zotero item(s) of the slide's figures and references (dev server; a picker when several) |
 | **I** | open the slide's ["in detail" slides](details.md); in them, **I** or **Esc** goes back |
 | **H** | this help (dev server); `/` searches it, the API index lists every function |
@@ -27,6 +29,21 @@ source in VS Code (dev server). In the dev server, a notification says how
 many slides overflow after each build that changes the count, and an
 overflowing step has a red bar at its bottom with the excess (*height
 +92pt*). `make check` fails on the same warnings.
+
+## Work in progress (W)
+
+**W** lists the slides marked `#todo` (🚧) or `#to-check` (👀), in deck
+order, like **O**: Enter (or a click) goes to it, **E** (or *edit*) opens
+its source in VS Code, **S** (or *state*) changes its work state (dev
+server). See [slide types and todo markers](slide-types.md).
+
+**shift-W**, or a click on a slide's 🚧 / 👀 note, opens the slide's work
+state: ↑ ↓ (or a click) picks *work in progress* (`#todo`), *to check*
+(`#to-check`) or *done* (no marker), the field is the note (optional; left
+untouched, the source's note is kept), Enter saves. The dev server writes it
+into the source (POST `/work`): the marker between the slide's heading and
+the next one is replaced or removed, or a new one goes on the line after the
+heading; the deck then rebuilds.
 
 ## Zotero (Z)
 

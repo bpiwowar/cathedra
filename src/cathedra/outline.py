@@ -30,10 +30,16 @@ from .paths import Course
 # slide-app's built-in slide types
 SLIDE_TYPES = {
     "todo": {"label": "work in progress", "icon": "🚧", "time": True},
+    "check": {"label": "to check", "icon": "👀", "time": True},
     "optional": {"label": "optional", "icon": "◇", "time": True},
     "practical": {"label": "practical", "icon": "💻", "time": False},
     "details": {"label": "in detail", "icon": "🔍", "time": False},
 }
+
+# the format of an outline (outline.json): bumped when what readers rely on
+# changes, so that an outline written by older code is recomputed, not misread
+# (2: nodes carry their slide's id)
+OUTLINE_VERSION = 2
 
 # the labels of the structure query, in document order
 SELECTOR = "selector(<page-marker>).or(<synopsis>).or(<module-meta>).or(<slide-type>)"
@@ -434,6 +440,7 @@ def deck_structure(  # noqa: C901
     ids = slide_ids(nodes, len(groups))
     for n in nodes:
         n["id"] = ids[n["g"]]
+    outline["version"] = OUTLINE_VERSION
     return groups, outline
 
 
@@ -610,6 +617,8 @@ def print_outlines(results: list[tuple], rate: float, show_slides: bool) -> None
             if s["types"].get("todo")
             else ""
         )
+        if s["types"].get("check"):
+            todo += f" · 👀 {s['types']['check']} to check"
         untimed = (
             f" · {s['slides'] - s['timed']} more not timed"
             if s["slides"] - s["timed"]

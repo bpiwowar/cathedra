@@ -225,7 +225,7 @@ The widget's fragments come after the slide's own steps (`#steps`,
 
 ## The engine's widgets
 
-`todo-note`: the work-in-progress marker of `#todo("…")` (hidden by M).
+`todo-note`: the work-in-progress marker of `#todo("…")`, and (`kind: "check"`) of `#to-check("…")` (hidden by M).
 
 `svg-object`: an SVG as a document of its own, scripts and links working
 (`#svg-object`, see [images](images.md#interactive-svg); props: `svg`, the

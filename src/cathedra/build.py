@@ -69,7 +69,11 @@ STYLE = """
     /* work in progress (slide-app's red frame); M hides it (body.todo-masked) */
     .reveal .slides section[data-types~="todo"]::after { content: ""; position: absolute; inset: 0;
       z-index: 4; border: 3px solid #cc0000; pointer-events: none; }
+    /* to check (#to-check): an amber frame */
+    .reveal .slides section[data-types~="check"]:not([data-types~="todo"])::after { content: "";
+      position: absolute; inset: 0; z-index: 4; border: 3px solid #d08a00; pointer-events: none; }
     body.todo-masked .reveal .slides section[data-types~="todo"]::after,
+    body.todo-masked .reveal .slides section[data-types~="check"]::after,
     body.todo-masked .reveal .slides .widget[data-widget="todo-note"] { display: none; }
     #flash { position: fixed; left: 50%; bottom: 8vh; z-index: 3000; transform: translateX(-50%);
       padding: 8px 16px; border-radius: 8px; background: rgb(20 20 30 / 0.85); color: #fff;
@@ -225,13 +229,28 @@ class DeckBuild:
         self.outline = outline
 
         nodes, pos, stack_of = outline_mod.layout(outline, len(groups))
-        ids = outline_mod.slide_ids(nodes, len(groups))
+        # the ids deck_structure gave: the section ids and the index's links
+        # (#/<id>) come from the same place
+        ids = [""] * len(groups)
+        for n in nodes:
+            ids[n["g"]] = n["id"]
         types_of: dict[int, list[str]] = {}
+        # the heading level of the title / section pages (0 title, 1 section,
+        # 2 subsection): the viewer drops the sections left empty
+        level_of: dict[int, int] = {}
         for n in nodes:
             cur = types_of.setdefault(n["g"], [])
+            if n.get("kind") != "slide":
+                lv = outline_mod._LEVEL[n["kind"]]
+                level_of[n["g"]] = min(lv, level_of.get(n["g"], lv))
             for t in n.get("types") or []:
                 if t not in cur:
                     cur.append(t)
+        # a content slide with no type is a "main" one (it can be left out
+        # too); title and section pages are never left out
+        for g, cur in types_of.items():
+            if not cur and g not in level_of:
+                cur.append("main")
         outline_json = json_dump(
             {**outline, "root": str(self.course.root) if self.dev else None}
         )
@@ -242,7 +261,9 @@ class DeckBuild:
                 p: g for g, x in enumerate(groups) for p in x["pages"]
             }
 
-        skeleton, layout = self._skeleton(groups, widgets, ids, types_of, pos, stack_of)
+        skeleton, layout = self._skeleton(
+            groups, widgets, ids, types_of, pos, stack_of, level_of
+        )
         layout_json = json_dump(layout)
 
         changed = [
@@ -304,7 +325,7 @@ class DeckBuild:
         )
         return result
 
-    def _skeleton(self, groups, widgets, ids, types_of, pos, stack_of):
+    def _skeleton(self, groups, widgets, ids, types_of, pos, stack_of, level_of):
         """The <section>s: structure = sections, step pages, widget ids and
         step counts; widget geometry and props are kept apart (layout)."""
         layout: dict = {}
@@ -350,6 +371,8 @@ class DeckBuild:
                 )
             types = types_of.get(g) or []
             t = f' data-types="{" ".join(types)}"' if types else ""
+            if g in level_of:
+                t += f' data-level="{level_of[g]}"'
             sections.append(
                 f'<section id="{ids[g]}" data-g="{g}"{t}>\n      {page_divs}\n      '
                 + "\n      ".join(slots)
@@ -499,14 +522,12 @@ class DeckBuild:
             walk(self.outline)
         return best[1] if best else None
 
-    def move_annot(self, page: int, key: str, values: dict) -> dict:
-        """shift-O: the annotation `key` of page `page` was moved: write
-        `values` ({dx, dy, width?}, Typst lengths) into its #annot call."""
-        from .annot import pick_annot_call, set_annot_args
-
-        g = self.group_of_page.get(page)
+    def slide_source(self, g: int | None) -> dict | str:
+        """The source of slide `g`: {file, path, line, end} (its heading's
+        line, the next outline entry's line in the same file); an error
+        message otherwise."""
         if g is None:
-            return {"error": f"no slide on page {page}"}
+            return "no such slide"
         nodes: list[dict] = []
 
         def walk(n: dict) -> None:
@@ -519,16 +540,53 @@ class DeckBuild:
             walk(self.outline)
         node = next((n for n in reversed(nodes) if n.get("g") == g), None)
         if not node:
-            return {"error": "the slide has no source location"}
+            return "the slide has no source location"
         file, line = node["src"]["file"], node["src"]["line"]
         nxt = [
             n["src"]["line"]
             for n in nodes
             if n["src"]["file"] == file and n["src"]["line"] > line
         ]
-        path = (self.course.root / file).resolve()
+        return {
+            "file": file,
+            "path": (self.course.root / file).resolve(),
+            "line": line,
+            "end": min(nxt) if nxt else float("inf"),
+        }
+
+    def set_work(self, g: int, state: str, note: str | None) -> dict:
+        """Slide `g`'s work state ("todo", "check", "none"; `note` None
+        keeps the current one) written into its source (work.py)."""
+        from .work import set_work_state
+
+        where = self.slide_source(g)
+        if isinstance(where, str):
+            return {"error": where}
+        if note is not None and not isinstance(note, str):
+            return {"error": "the note must be a string"}
+        src = where["path"].read_text()
+        r = set_work_state(src, where["line"], where["end"], state, note)
+        if isinstance(r, str):
+            return {"error": f"{r} ({where['file']})"}
+        out, line = r
+        if out != src:
+            where["path"].write_text(out)
+        return {"file": where["file"], "line": line or where["line"], "state": state}
+
+    def move_annot(self, page: int, key: str, values: dict) -> dict:
+        """shift-O: the annotation `key` of page `page` was moved: write
+        `values` ({dx, dy, width?}, Typst lengths) into its #annot call."""
+        from .annot import pick_annot_call, set_annot_args
+
+        g = self.group_of_page.get(page)
+        if g is None:
+            return {"error": f"no slide on page {page}"}
+        where = self.slide_source(g)
+        if isinstance(where, str):
+            return {"error": where}
+        file, line, path = where["file"], where["line"], where["path"]
         src = path.read_text()
-        found = pick_annot_call(src, key, line, min(nxt) if nxt else float("inf"))
+        found = pick_annot_call(src, key, line, where["end"])
         if isinstance(found, str):
             return {"error": f"{found} ({file})"}
         allowed = {

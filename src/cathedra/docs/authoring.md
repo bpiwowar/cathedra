@@ -149,7 +149,7 @@ Figures and captions take the names too: see [figures](figures.md#a-figure-in-st
   `minutes` is what `make outline` adds up against the `target` of
   `course.yaml`.
 - `#synopsis[…]`: what a section covers, for the outline and the index.
-- `#slide-type("optional")`, `#todo("…")`: see
+- `#slide-type("optional")`, `#todo("…")`, `#to-check("…")`: see
   [slide types](slide-types.md).
 
 ## Web or print only

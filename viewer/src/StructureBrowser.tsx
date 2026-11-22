@@ -1,5 +1,5 @@
 import React from "react";
-import { isShown, SLIDE_TYPES } from "./slide-types";
+import { dropEmpty, isShown, SLIDE_TYPES, typesOf } from "./slide-types";
 import { t as tr } from "./i18n";
 
 // slide-app's structure browser (T) and edit links (E, shift-E), over the
@@ -81,10 +81,32 @@ export function StructureBrowser(props: {
   onTypes?: (choice: Record<string, boolean>) => void; // show / hide slide types (reloads)
 }) {
   const { outline, current, onGo, onClose, todoMasked, onTypes } = props;
-  // the types a slide shows as badges (todo ones gone under M)
-  const shownTypes = (n: Node) => n.types.filter((t) => !(todoMasked && t === "todo"));
-  const hiddenSlide = (n: Node) => n.kind === "slide" && n.types.some((t) => !isShown(t));
+  // the types a slide shows as badges (todo / check ones gone under M)
+  const shownTypes = (n: Node) => n.types.filter((t) => !(todoMasked && (t === "todo" || t === "check")));
   const { parent, order, byG } = React.useMemo(() => index(outline), [outline]);
+  // the slides left out, and the (sub)sections they leave empty
+  const removed = React.useMemo(() => {
+    const out = new Set<Node>();
+    const walk = (n: Node): [number, number] => {
+      if (n.kind === "slide") {
+        const hidden = typesOf(n).some((t) => !isShown(t));
+        if (hidden) out.add(n);
+        return [1, hidden ? 0 : 1];
+      }
+      let total = 0;
+      let kept = 0;
+      for (const c of n.children) {
+        const [t, k] = walk(c);
+        total += t;
+        kept += k;
+      }
+      if (dropEmpty() && n.kind !== "title" && total > 0 && kept === 0) out.add(n);
+      return [total, kept];
+    };
+    outline.children.forEach(walk);
+    return out;
+  }, [outline]);
+  const hiddenSlide = (n: Node) => removed.has(n);
   const ancestors = (n: Node | undefined | null) => {
     const out: Node[] = [];
     for (let p = n ? parent.get(n) : null; p; p = parent.get(p)) out.push(p);
@@ -102,7 +124,7 @@ export function StructureBrowser(props: {
   const filtering = terms.length > 0 || only.size > 0;
   const types = React.useMemo(() => [...new Set(order.flatMap(shownTypes))], [order, todoMasked]);
   // every type of the deck, for the show / hide checkboxes
-  const deckTypes = React.useMemo(() => [...new Set(order.flatMap((n) => n.types))], [order]);
+  const deckTypes = React.useMemo(() => [...new Set(order.flatMap(typesOf))], [order]);
   // the ticked "in the deck" boxes, applied (reloading the deck) by the button
   const [pending, setPending] = React.useState<Record<string, boolean>>({});
   const changed = Object.fromEntries(Object.entries(pending).filter(([t, v]) => v !== isShown(t)));
@@ -239,6 +261,14 @@ export function StructureBrowser(props: {
                 {TYPE_ICONS[t] ?? "•"} {typeLabel(t)}
               </label>
             ))}
+            <label title={tr("sb.emptyNote")}>
+              <input
+                type="checkbox"
+                checked={!(pending.empty ?? isShown("empty"))}
+                onChange={(e) => setPending((p) => ({ ...p, empty: !e.target.checked }))}
+              />
+              {tr("sb.dropEmpty")}
+            </label>
             <button
               className="sb-apply"
               disabled={Object.keys(changed).length === 0}
@@ -296,7 +326,7 @@ export function StructureBrowser(props: {
                 </span>
                 {shownTypes(n).map((t) => (
                   <span key={t} className={`sb-badge sb-type-${t}`} title={t}>
-                    {TYPE_ICONS[t] ?? "•"} {t === "todo" ? "todo" : ""}
+                    {TYPE_ICONS[t] ?? "•"} {t === "todo" ? "todo" : t === "check" ? "check" : ""}
                   </span>
                 ))}
                 {Object.entries(c).map(([t, k]) => (

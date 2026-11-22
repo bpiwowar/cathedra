@@ -11,7 +11,7 @@ import "./structure-browser.css";
 import { Help, loadDocs } from "./Help";
 import { openAnnotEditor } from "./AnnotEditor";
 import { initMorph, morphUpdate } from "./morph";
-import { devEvent, initExtras } from "./extras";
+import { devEvent, editWork, initExtras } from "./extras";
 import { t } from "./i18n";
 import { showLoading } from "./toasts";
 import { SvgObject } from "./engine-widgets";
@@ -31,11 +31,19 @@ const widgets: Record<string, Widget> = {
   "svg-object": { component: SvgObject },
 };
 
-function TodoNote({ note }: { note: string }) {
+// kind: "todo" (red, 🚧) or "check" (#to-check: amber, 👀)
+function TodoNote({ note, kind }: { note: string; kind?: string }) {
+  const check = kind === "check";
+  const dev = document.body.dataset.dev === "true";
+  const color = check ? "#a35a00" : "#cc0000";
   return (
     <div style={{ display: "flex", justifyContent: "flex-end" }}>
-      <span style={{ background: "#fff0f0", border: "1px solid #cc0000", borderRadius: 3, padding: "1px 5px", color: "#cc0000", fontSize: 11, whiteSpace: "nowrap" }}>
-        🚧 {note}
+      <span
+        // dev server: a click changes the work state (shift-W, extras.tsx)
+        onClick={dev ? (e) => editWork(Number((e.currentTarget.closest("section[data-g]") as HTMLElement)?.dataset.g)) : undefined}
+        title={dev ? t("work.title") + " (shift-W)" : undefined}
+        style={{ cursor: dev ? "pointer" : undefined, background: check ? "#fff6e0" : "#fff0f0", border: `1px solid ${color}`, borderRadius: 3, padding: "1px 5px", color, fontSize: 11, whiteSpace: "nowrap" }}>
+        {check ? "👀" : "🚧"} {note}
       </span>
     </div>
   );

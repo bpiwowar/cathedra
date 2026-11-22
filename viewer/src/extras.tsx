@@ -1,5 +1,7 @@
 // Viewer features added to main.tsx, kept apart from it: "in detail" slides
-// (details.ts), O (the slides that overflow), Z (Zotero items of the slide),
+// (details.ts), O (the slides that overflow), W (the slides marked #todo /
+// #to-check) and their work state (shift-W, a click on the note: written into
+// the source by the dev server), Z (Zotero items of the slide),
 // the interface language (i18n.ts) and toasts for the dev server
 // (toasts.ts). main.tsx calls `initExtras` once Reveal is ready, and the
 // dev-server hooks (`devEvent`) on its messages.
@@ -12,7 +14,7 @@ import { closeToast, loaded, toast } from "./toasts";
 import { slideZoteroLinks } from "./zotero";
 
 export type Overflow = { g: number; page: number; message: string };
-type Node = { kind: string; title: string | null; g: number; slide: number; src: { file: string; line: number } | null; children: Node[] };
+type Node = { kind: string; title: string | null; g: number; slide: number; types?: string[]; src: { file: string; line: number } | null; children: Node[] };
 type Outline = {
   title: string | null;
   root: string | null;
@@ -112,6 +114,165 @@ export function showOverflows() {
   );
 }
 
+// ------------------------------------------------------------------- W
+const WIP_ICONS: Record<string, string> = { todo: "🚧", check: "👀" };
+/** The slides marked work in progress (#todo) or to check (#to-check),
+ *  in deck order, to go to or edit. */
+export function showWip() {
+  const o = ctx.outline();
+  const list: Node[] = [];
+  const walk = (n: Node) => {
+    if (n.kind === "slide" && (n.types ?? []).some((x) => x in WIP_ICONS)) list.push(n);
+    n.children?.forEach(walk);
+  };
+  o.children.forEach(walk);
+  const edit = (n: Node) => {
+    if (n.src && o.root) ctx.openApp(ctx.editUrl(o.root, n.src));
+  };
+  ctx.openPanel(
+    <Picker
+      title={`${t("wip.title")} (${list.length})`}
+      empty={t("wip.none")}
+      help={t(isDev() ? "wip.help" : "overflow.help")}
+      items={list.map((n) => ({
+        label: `${(n.types ?? []).filter((x) => x in WIP_ICONS).map((x) => WIP_ICONS[x]).join("")} ${slideLabel(n.g)}`,
+        detail: n.src ? `${n.src.file}:${n.src.line}` : undefined,
+        actions: [
+          ...(isDev() && n.src ? [{ label: t("work.change"), key: "s", run: () => editWork(n.g) }] : []),
+          ...(o.root && n.src ? [{ label: t("overflow.edit"), key: "e", run: () => edit(n) }] : []),
+        ],
+      }))}
+      onPick={(i) => {
+        ctx.closePanel();
+        ctx.goTo(list[i].g);
+      }}
+      onClose={ctx.closePanel}
+    />,
+  );
+}
+
+// ------------------------------------------------- work state (shift-W)
+type WorkState = "todo" | "check" | "none";
+const isDev = () => document.body.dataset.dev === "true";
+
+/** The note shown on slide `g` (its todo-note widget), if it is mounted. */
+function currentNote(g: number): string | null {
+  const el = document.querySelector(`.reveal .slides section[data-g="${g}"] .widget[data-widget="todo-note"]`);
+  const text = el?.textContent?.trim();
+  return text ? text.replace(/^(🚧|👀)\s*/u, "") : null;
+}
+
+/** The work state of slide `g` (todo, check or none) and its note, to
+ *  change: written into the source (POST work, work.py). Dev server only. */
+export function editWork(g: number) {
+  if (!isDev()) return ctx.flash(t("work.devOnly"));
+  const n = nodeOf(g);
+  if (!n?.src) return ctx.flash(t("work.noSource"));
+  const types = n.types ?? [];
+  const state: WorkState = types.includes("todo") ? "todo" : types.includes("check") ? "check" : "none";
+  const save = async (s: WorkState, note: string | undefined) => {
+    ctx.closePanel();
+    try {
+      const res = await fetch("work", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ g, state: s, note }),
+      });
+      const r = await res.json();
+      ctx.flash(r.error ? t("work.failed", { error: r.error }) : t("work.saved", { state: t(`work.${s}`), where: `${r.file}:${r.line}` }));
+    } catch (e) {
+      ctx.flash(t("work.failed", { error: String(e) }));
+    }
+  };
+  ctx.openPanel(<WorkPanel title={slideLabel(g)} state={state} note={currentNote(g)} onSave={save} onClose={ctx.closePanel} />);
+}
+
+const WORK_STATES: { s: WorkState; icon: string }[] = [
+  { s: "todo", icon: "🚧" },
+  { s: "check", icon: "👀" },
+  { s: "none", icon: "✓" },
+];
+
+function WorkPanel(props: {
+  title: string;
+  state: WorkState;
+  note: string | null;
+  onSave: (s: WorkState, note: string | undefined) => void;
+  onClose: () => void;
+}) {
+  const [state, setState] = React.useState<WorkState>(props.state);
+  const [note, setNote] = React.useState(props.note ?? "");
+  const [touched, setTouched] = React.useState(false);
+  const input = React.useRef<HTMLInputElement>(null);
+  React.useEffect(() => input.current?.focus(), []);
+  // the note: kept as it is in the source unless edited
+  const save = (s = state) => props.onSave(s, touched ? note.trim() : undefined);
+  const move = (d: number) => {
+    const i = WORK_STATES.findIndex((x) => x.s === state);
+    setState(WORK_STATES[(i + d + WORK_STATES.length) % WORK_STATES.length].s);
+  };
+  const onKey = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") props.onClose();
+    else if (e.key === "Enter") save();
+    else if (e.key === "ArrowDown") move(1);
+    else if (e.key === "ArrowUp") move(-1);
+    else {
+      e.stopPropagation(); // typing in the note
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  return (
+    <div className="sb-overlay" tabIndex={-1} onKeyDown={onKey} onClick={(e) => e.target === e.currentTarget && props.onClose()}>
+      <div className="sb-panel" style={{ maxWidth: 520, height: "auto" }}>
+        <div className="sb-header">
+          <strong>
+            {t("work.title")} — {props.title}
+          </strong>
+          <span className="sb-spacer" />
+          <button onClick={props.onClose} title={t("close")}>
+            ✕
+          </button>
+        </div>
+        <div className="sb-list">
+          {WORK_STATES.map((x) => (
+            <div
+              key={x.s}
+              className={`sb-row${x.s === state ? " selected" : ""}`}
+              onClick={() => setState(x.s)}
+              onDoubleClick={() => save(x.s)}
+            >
+              <span className="sb-number" style={{ width: "1.5em", textAlign: "left" }}>
+                {x.icon}
+              </span>
+              <span className="sb-title">{t(`work.${x.s}`)}</span>
+              {x.s === props.state && <span className="sb-file">{t("work.current")}</span>}
+            </div>
+          ))}
+          <div className="sb-row context" style={{ gap: 8 }}>
+            <input
+              ref={input}
+              style={{ flex: 1, font: "14px system-ui, sans-serif", padding: "4px 6px" }}
+              value={note}
+              disabled={state === "none"}
+              placeholder={t(props.note === null && props.state !== "none" ? "work.noteKept" : "work.note")}
+              onChange={(e) => {
+                setNote(e.target.value);
+                setTouched(true);
+              }}
+            />
+            <button className="picker-action" onClick={() => save()}>
+              {t("work.save")}
+            </button>
+          </div>
+        </div>
+        <div className="sb-help">{t("work.help")}</div>
+      </div>
+    </div>
+  );
+}
+
 /** "content height: 512pt, available height: 420pt" -> "height +92pt" */
 function excess(message: string) {
   const m = /content (\w+): ([\d.]+)pt, available \1: ([\d.]+)pt/.exec(message);
@@ -162,6 +323,16 @@ export function initExtras(c: ExtrasContext) {
   // O: Reveal's own O (the overview) is left to Esc
   c.deck.addKeyBinding({ keyCode: 79, key: "O", description: t("key.overflow") }, () => {
     if (!c.panelOpen()) showOverflows();
+  });
+  c.deck.addKeyBinding({ keyCode: 87, key: "W", description: t("key.wip") }, () => {
+    if (!c.panelOpen()) showWip();
+  });
+  // shift-W (Reveal drops shift-modified keys: a listener of its own)
+  window.addEventListener("keydown", (e) => {
+    if (e.key !== "W" || !e.shiftKey || e.metaKey || e.ctrlKey || e.altKey || c.panelOpen()) return;
+    if ((e.target as HTMLElement).closest?.("input, textarea, [contenteditable]")) return;
+    e.preventDefault();
+    editWork(c.currentG());
   });
   c.deck.addKeyBinding({ keyCode: 90, key: "Z", description: t("key.zotero") }, () => {
     if (!c.panelOpen()) openZotero();
