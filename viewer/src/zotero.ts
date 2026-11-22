@@ -2,7 +2,7 @@
 // src/zotero-links.ts). In the dev build an `#img(…, origin: "zotero://…")`
 // and a `#reference` icon are zotero:// links of the page (lib/slides.typ),
 // the SVG page's own <a> (svg-pages.ts). Z takes those of the step
-// page shown: one is opened, several give a picker.
+// page shown, in a picker (even for one).
 import { t } from "./i18n";
 
 export type ZoteroLink = { href: string; label: string };
@@ -28,7 +28,14 @@ function lineText(page: HTMLElement, link: HTMLElement): string {
     return b.top <= mid && b.bottom >= mid && b.left >= r.left - 2;
   });
   spans.sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
-  const text = spans.map((s) => s.textContent).join(" ").replace(/\s+/g, " ").trim();
+  // (without the icons: Font Awesome glyphs are private-use characters, boxes
+  // outside the slide's fonts)
+  const text = spans
+    .map((s) => s.textContent)
+    .join(" ")
+    .replace(/[\uE000-\uF8FF]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
   return text.length > 110 ? text.slice(0, 108) + "…" : text;
 }
 
