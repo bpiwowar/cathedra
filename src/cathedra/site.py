@@ -39,7 +39,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from .outline import compile_outlines, fmt_minutes, stats
+from .outline import OUTLINE_VERSION, compile_outlines, fmt_minutes, stats
 from .paths import TYPST, Course, schedule as load_schedule
 
 # ---------------------------------------------------------------- schedule
@@ -159,8 +159,12 @@ def outlines(
     missing = []
     for i in ids:
         f = directory / i / "outline.json" if directory else None
+        data = None
         if f and f.exists() and f.stat().st_mtime >= newer:
-            result[i] = json.loads(f.read_text())
+            data = json.loads(f.read_text())
+        # one written by older code (another format) is recomputed
+        if data and data.get("version") == OUTLINE_VERSION:
+            result[i] = data
         else:
             missing.append(i)
     if missing:
@@ -293,11 +297,7 @@ def index_html(  # noqa: C901
             subs = f"<ul>{''.join(sub)}</ul>" if sub else ""
             title = esc(c["title"])
             # the slide's id (#/marks); #/<n> would be the n-th *stack*
-            at = c.get("id") or (
-                f"{c['h']}/{c['v']}"
-                if _number(c.get("h")) and _number(c.get("v"))
-                else None
-            )
+            at = c.get("id")
             if href is not None and at:
                 title = f'<a href="{esc(href)}#/{esc(at)}">{title}</a>'
             out.append(
@@ -397,7 +397,12 @@ def index_html(  # noqa: C901
     )
     script = TOGGLE_SCRIPT if has_outline else ""
     live_script = (
-        "\n  <script>new EventSource('/_events').onmessage = function () { location.reload(); };</script>"
+        "\n  <script>(function () { var boot = null;"
+        "\n    new EventSource('/_events').onmessage = function (e) {"
+        "\n      // a restarted server (another boot id) may have changed the page too"
+        "\n      if (e.data.indexOf('boot:') !== 0) location.reload();"
+        "\n      else if (boot && boot !== e.data) location.reload();"
+        "\n      else boot = e.data; }; })();</script>"
         if live
         else ""
     )

@@ -8,6 +8,10 @@ pages reloaded then, via /_events); each deck on /<id>/, served by its own
 dev server (`cathedra serve --socket=<out>/<id>.sock`), started on its
 first request and proxied; other files from the static directories, in
 order.
+
+When cathedra's own code changes, the server restarts (with the deck servers
+it started): a long-running server would otherwise keep serving what the old
+code computed (say, links in an older format).
 """
 
 from __future__ import annotations
@@ -17,6 +21,7 @@ import os
 import signal
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import aiohttp
@@ -24,6 +29,28 @@ from aiohttp import web
 
 from .paths import Course
 from .site import deck_ids, index_html, outlines, read_practicals, schedule
+
+PACKAGE = Path(__file__).resolve().parent
+
+
+def code_mtime() -> float:
+    """When cathedra's Python code last changed."""
+    return max((f.stat().st_mtime for f in PACKAGE.rglob("*.py")), default=0.0)
+
+
+def code_ok() -> bool:
+    """Whether the (changed) code imports, before restarting on it."""
+    r = subprocess.run(
+        [sys.executable, "-c", "import cathedra.cli, cathedra.course_server"],
+        capture_output=True,
+        text=True,
+    )
+    if r.returncode != 0:
+        print(  # noqa: T201
+            f"[site] cathedra's code changed but does not import, not restarting:\n{r.stderr}",
+            flush=True,
+        )
+    return r.returncode == 0
 
 
 class CourseServer:
@@ -44,6 +71,9 @@ class CourseServer:
         self.starting: dict[str, asyncio.Task] = {}
         self.cached: tuple[float, str] | None = None
         self.listeners: set[asyncio.Queue] = set()
+        self.code = code_mtime()
+        self.restart = False
+        self.boot = f"{os.getpid()}-{time.time()}"
 
     def ids(self) -> list[str]:
         return deck_ids(self.course, schedule(self.course), dev=self.dev)
@@ -124,7 +154,8 @@ class CourseServer:
             headers={"Content-Type": "text/event-stream", "Cache-Control": "no-cache"}
         )
         await resp.prepare(request)
-        await resp.write(b": hello\n\n")
+        # the client reloads when it reconnects to a restarted server
+        await resp.write(f"data: boot:{self.boot}\n\n".encode())
         q: asyncio.Queue = asyncio.Queue()
         self.listeners.add(q)
         try:
@@ -137,11 +168,20 @@ class CourseServer:
             self.listeners.discard(q)
         return resp
 
-    async def poll(self) -> None:
-        """The open index pages reload when the course's sources change."""
+    async def poll(self, stop: asyncio.Event) -> None:
+        """The open index pages reload when the course's sources change; the
+        server restarts when cathedra's code does."""
         last = self.newest()
         while True:
             await asyncio.sleep(1)
+            code = code_mtime()
+            if code > self.code:
+                self.code = code
+                if await asyncio.to_thread(code_ok):
+                    print("[site] cathedra's code changed: restarting", flush=True)  # noqa: T201
+                    self.restart = True
+                    stop.set()
+                    return
             t = self.newest()
             if t > last:
                 last = t
@@ -228,6 +268,12 @@ class CourseServer:
                 os.killpg(c.pid, signal.SIGTERM)
             except OSError:
                 pass
+        for c in self.children:  # gone (and their sockets) before a restart
+            try:
+                c.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                pass
+        self.children = []
 
 
 async def _run(server: CourseServer, port: int) -> None:
@@ -244,7 +290,7 @@ async def _run(server: CourseServer, port: int) -> None:
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
         loop.add_signal_handler(sig, stop.set)
-    poller = asyncio.create_task(server.poll())
+    poller = asyncio.create_task(server.poll(stop))
     try:
         await stop.wait()
     finally:
@@ -266,3 +312,7 @@ def serve_course(
         asyncio.run(_run(server, port))
     finally:
         server.stop()
+    if server.restart:
+        # the same command, on the new code (the deck servers start again on
+        # their first request)
+        os.execv(sys.executable, sys.orig_argv)
