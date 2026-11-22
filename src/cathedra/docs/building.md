@@ -88,7 +88,8 @@ course](course.md)), or on the command line (`make serve DECK=lecture-2`):
   (`pdf: true`), `[dev]` badge, synopsis (`#synopsis` before the title slide,
   else the schedule's `summary`), a foldable outline (sections, sub-sections,
   their `#synopsis` and time at `timePerSlide` minutes per slide, 2 by
-  default) and practical links. A lecture with `externalPdf` (a path in the
+  default; the times only in the dev site, unless the schedule's `timing` is
+  `true` or `false`) and practical links. A lecture with `externalPdf` (a path in the
   site, e.g. from `STATIC`) is only a link. A deck directory no longer in the
   site is removed. The build fails if a text file of the site holds a local
   absolute path (the course directory, `$HOME`).

@@ -20,7 +20,8 @@ from the course directory (makefile.mk does: `make site`, `site-pdf`,
 The schedule is $SLIDES_SCHEDULE (YAML): `lectures: [{id, title, dev, pdf,
 externalPdf, practicals, summary, target, timePerSlide}]`, plus optional
 top-level `lang` (en, fr), `index` (wording overrides, e.g. `{practicals:
-TP}`) and `timePerSlide` (minutes, 2 by default). A lecture is a deck when
+TP}`), `timePerSlide` (minutes, 2 by default) and `timing` (the outline's
+times: true, false, or `dev`, the default: in the dev site only). A lecture is a deck when
 lectures/<id>.typ exists; `externalPdf` (a path in the site) is only linked;
 `dev: true` decks and practicals are in the dev site only. Without a
 schedule, every lectures/*.typ is a deck. The practicals manifest: {baseUrl,
@@ -276,8 +277,11 @@ def index_html(  # noqa: C901
         sched.get("timePerSlide") if _number(sched.get("timePerSlide")) else 2
     )
 
+    timing = sched.get("timing", "dev")
+    show_time = dev if timing == "dev" else bool(timing)
+
     def minutes(node: dict, rate: float) -> float:
-        return stats(node)["timed"] * rate
+        return stats(node)["timed"] * rate if show_time else 0
 
     def outline_items(node: dict, rate: float, href: str | None) -> list[str]:
         out = []

@@ -201,6 +201,7 @@ The schedule's entries take, besides `id`, `title` and `target`:
 ```yaml
 lang: en                   # the index page's wording (en, fr)
 timePerSlide: 2            # minutes per slide, for the outline's times
+timing: dev                # outline times: true, false, dev (default: dev site only)
 lectures:
   - id: lecture-1
     title: "Lecture 1: Foundations"

@@ -123,3 +123,21 @@ def test_outline_sources_after_untitled_slide(course, course_dir):
     slides = {n["title"]: n["src"] for n in walk(outline) if n["kind"] == "slide"}
     steps = slides["A slide with steps"]
     assert lines[steps["line"] - 1] == "=== A slide with steps"
+
+
+def test_index_outline_times_dev_only(course, course_dir):
+    """The outline's times are in the dev site only, unless `timing` says."""
+    from cathedra.outline import compile_outlines
+
+    [(_, outline)] = compile_outlines(
+        course, [{"id": "demo", "file": course.deck_file("demo")}]
+    )
+    sched = {"lectures": [{"id": "demo", "title": "The demo"}]}
+
+    def page(sched, dev):
+        return index_html(course, sched, {"demo": outline}, dev)
+
+    assert 'class="outline-time"' in page(sched, True)
+    assert 'class="outline-time"' not in page(sched, False)
+    assert 'class="outline-time"' in page({**sched, "timing": True}, False)
+    assert 'class="outline-time"' not in page({**sched, "timing": False}, True)
