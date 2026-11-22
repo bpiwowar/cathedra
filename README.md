@@ -148,6 +148,7 @@ without the rebuilt bundle. Releases: a GitHub release publishes the wheels
 
 ## Pages
 
+- [Quick reference](docs/quick.md): the syntax at a glance (the help opens on it)
 - [Setting up a course](docs/course.md): the Makefile, `common/course.typ`, VS Code
 - [Templates](docs/templates.md): `academic` and its options
 - [Writing slides](docs/authoring.md): decks, modules, headings, steps, metadata

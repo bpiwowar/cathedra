@@ -14,7 +14,8 @@ md.core.ruler.push("heading_ids", (state) => {
   });
 });
 
-const HOME = "README.md";
+// the quick reference: what one needs while writing slides (README: about)
+const HOME = "docs/quick.md";
 function resolve(from: string, href: string) {
   const out = from.split("/").slice(0, -1);
   for (const part of href.split("/")) {
