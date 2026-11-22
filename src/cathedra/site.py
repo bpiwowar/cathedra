@@ -197,6 +197,8 @@ INDEX_STYLE = """
     }
     .practical-bundle a { font-weight: 600; }
     .deck-summary { color: #444; font-size: 0.9em; margin-top: 0.25rem; }
+    .deck-summary ul, .outline-summary ul { margin: 0.2rem 0; padding-left: 1.2rem; }
+    .deck-summary li, .outline-summary li { list-style: disc; border: none; padding: 0; }
     details.outline { margin-top: 0.4rem; font-size: 0.88em; }
     details.outline > summary { cursor: pointer; color: #666; }
     details.outline ul { list-style: none; padding-left: 1.1rem; margin: 0.3rem 0; }
@@ -204,6 +206,8 @@ INDEX_STYLE = """
     details.outline li { border: none; padding: 0.15rem 0; }
     .outline-section > .outline-title { font-weight: 600; color: #333; }
     .outline-subsection > .outline-title { color: #333; }
+    .outline-title a { color: inherit; text-decoration: none; }
+    .outline-title a:hover { text-decoration: underline; }
     .outline-time { color: #999; font-size: 0.85em; margin-left: 0.4rem; }
     .outline-summary { color: #555; font-size: 0.95em; line-height: 1.4; }
     .synopsis-toggle { font-size: 0.8rem; font-weight: normal; vertical-align: middle; margin-left: 1rem; cursor: pointer;
@@ -229,6 +233,17 @@ TOGGLE_SCRIPT = """
       window.addEventListener('beforeprint', function () { outlines.forEach(function (d) { d.open = true; }); });
     })();
   </script>"""
+
+
+def rich(text: str) -> str:
+    """A synopsis as HTML: its "- " lines (list items, see `plain` in
+    lib/slides.typ) as a list, the rest as text."""
+    lines = [x.strip() for x in str(text).split("\n") if x.strip()]
+    prose = " ".join(x for x in lines if not x.startswith("- "))
+    items = "".join(
+        f"<li>{esc(x[2:].strip())}</li>" for x in lines if x.startswith("- ")
+    )
+    return esc(prose) + (f"<ul>{items}</ul>" if items else "")
 
 
 def _number(v) -> bool:
@@ -260,7 +275,7 @@ def index_html(  # noqa: C901
     def minutes(node: dict, rate: float) -> float:
         return stats(node)["timed"] * rate
 
-    def outline_items(node: dict, rate: float) -> list[str]:
+    def outline_items(node: dict, rate: float, href: str | None) -> list[str]:
         out = []
         for c in node.get("children") or []:
             if c["kind"] not in ("section", "subsection"):
@@ -270,14 +285,17 @@ def index_html(  # noqa: C901
                 f' <span class="outline-time">{esc(fmt_minutes(m))}</span>' if m else ""
             )
             summary = (
-                f'<div class="outline-summary">{esc(c["synopsis"])}</div>'
+                f'<div class="outline-summary">{rich(c["synopsis"])}</div>'
                 if c.get("synopsis")
                 else ""
             )
-            sub = outline_items(c, rate)
+            sub = outline_items(c, rate, href)
             subs = f"<ul>{''.join(sub)}</ul>" if sub else ""
+            title = esc(c["title"])
+            if href is not None and _number(c.get("g")):
+                title = f'<a href="{esc(href)}#/{c["g"]}">{title}</a>'
             out.append(
-                f'<li class="outline-{c["kind"]}"><span class="outline-title">{esc(c["title"])}</span>{time}{summary}{subs}</li>'
+                f'<li class="outline-{c["kind"]}"><span class="outline-title">{title}</span>{time}{summary}{subs}</li>'
             )
         return out
 
@@ -285,12 +303,13 @@ def index_html(  # noqa: C901
         root = outline_of.get(lec.get("id")) if lec.get("id") else None
         text = (root or {}).get("synopsis") or lec.get("summary")
         summary = (
-            f'\n        <div class="deck-summary">{esc(text)}</div>' if text else ""
+            f'\n        <div class="deck-summary">{rich(text)}</div>' if text else ""
         )
         if not root:
             return summary
         rate = lec["timePerSlide"] if _number(lec.get("timePerSlide")) else default_rate
-        items = outline_items(root, rate)
+        href = None if lec.get("externalPdf") else f"{lec['id']}/"
+        items = outline_items(root, rate, href)
         if not items:
             return summary
         m = minutes(root, rate)

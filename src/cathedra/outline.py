@@ -542,7 +542,7 @@ def print_outlines(results: list[tuple], rate: float, show_slides: bool) -> None
             print(
                 f"  target {deck['target']} — main flow {'+' if gap > 0 else ''}{_js_num(gap)} min ({state})"
             )
-        syn = outline.get("synopsis")
+        syn = " ".join((outline.get("synopsis") or "").split())
         if syn:
             print(f"  {syn[: 2 * w]}{'…' if len(syn) > 2 * w else ''}")
         print("")

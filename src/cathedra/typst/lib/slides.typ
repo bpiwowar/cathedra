@@ -98,7 +98,10 @@
 // ---------------------------------------------------------- page markers
 // Plain text of a piece of content (headings, for the outline).
 #let plain(c) = {
-  if c == none { "" } else if type(c) == str { c } else if c.has("text") {
+  if c == none { "" } else if type(c) == str { c } else if c.func() in (list.item, enum.item) {
+    // one item per line, "- " first: the index renders them as a list
+    "\n- " + plain(c.body).trim()
+  } else if c.has("text") {
     if type(c.text) == str { c.text } else { plain(c.text) }
   } else if c.has("children") { c.children.map(plain).join("", default: "") } else if c.has("body") {
     plain(c.body)
