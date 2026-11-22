@@ -7,8 +7,25 @@
 #slide-type("optional")
 ```
 
-Types: `todo` 🚧 (work in progress), `optional` ◇, `practical` 💻. The mark
-renders as nothing; the outline and the structure browser show a badge.
+Types: `todo` 🚧 (work in progress), `optional` ◇, `practical` 💻. The
+outline and the structure browser show a badge, and the slide a small grey
+icon at the top right (a type with no icon shows as its name; `todo` has
+its own note, below).
+
+The template draws the icons: `academic` puts `#slide-type-marks()` at the
+right of its header, and its `slide-types:` option changes them: `none`
+hides them, a function of the types (an array of strings) draws its own:
+
+```typst
+#let (theme: course-theme, title-slide: title-slide) = academic(
+  slide-types: types => text(fill: red, types.join(", ")),
+)
+```
+
+Another template calls `#slide-type-marks()` where it wants them, and
+`#set-slide-type-display(f)` (in its preamble) to change how they look;
+`slide-type-icons` lists the icons, `current-slide-types()` the types of the
+slide being laid out.
 
 Leave a type out of the deck:
 

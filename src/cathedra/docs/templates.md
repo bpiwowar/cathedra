@@ -33,6 +33,7 @@ every slide the main section › sub-section above and the slide number below.
 | `list-spacing` | `0.9em` | space between the items of a list (`-`) or an enumeration (`+`); `0.65em` is Typst's (the line spacing). A slide can set its own: `#set list(spacing: 0.6em)` |
 | `lang` | `"en"` | hyphenation, quotes, the viewer's language (`"fr"`, `"en"`), the title of the "in detail" appendix |
 | `details-title` | `auto` | the title of the ["in detail"](details.md) appendix (*In detail*, *Compléments* in French) |
+| `slide-types` | `auto` | how the [slide types](slide-types.md) show at the top right: `auto` (small grey icons), `none` (hidden), or a function of the types (an array of strings) |
 | `data` | `(:)` | the course's generated data (`ref-links`, `widget-shots`), read by `common/course.typ` when cathedra compiles (see [course](course.md#commoncoursetyp)) |
 
 The artwork is drawn at the slide height; with content in its corners only,

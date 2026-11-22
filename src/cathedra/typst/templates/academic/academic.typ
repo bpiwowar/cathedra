@@ -30,6 +30,9 @@
       let sub = utils.current-heading(level: 2)
       if sub != none [ #sym.space.thin › #sub.body]
     }
+    // the slide's types (`#slide-type`), top right
+    h(1fr)
+    slide-type-marks()
   }
   let footer(self) = {
     set text(size: 0.5em, fill: muted)
@@ -84,6 +87,9 @@
 //   (`annot-config` in lib/slides.typ), e.g. `(handout: "none")`
 // - details-title: the title of the "in detail" appendix (`#details`); auto:
 //   "In detail", "Compléments" when `lang` is "fr"
+// - slide-types: how the slide types (`#slide-type`) show at the top right:
+//   auto (small grey icons, `slide-type-badge`), none (not shown), or a
+//   function of the types (an array of strings) returning content
 // - data: the course's generated data, read by its common/course.typ when
 //   cathedra compiles (`generated`): `(ref-links: json("/lib/refs-links.json"),
 //   widget-shots: …)` (see `course-setup` in lib/slides.typ); none of it is
@@ -104,6 +110,7 @@
   lang: "en",
   annotations: (:),
   details-title: auto,
+  slide-types: auto,
   // the page shape, "W-H": "16-9" (default), "16-10", "4-3", …; the page is
   // 841.89pt (A4) wide. A deck's `course-theme.with(aspect-ratio: …)`
   // overrides it, and `--input aspect-ratio=16-10` both
@@ -201,7 +208,10 @@
       ),
       config-common(
         // the title's look, for the pages of an allow-breaks slide
-        preamble: set-title-block(title-block),
+        preamble: {
+          set-title-block(title-block)
+          if slide-types != auto { set-slide-type-display(slide-types) }
+        },
         slide-fn: slide,
         slide-level: 3,
         new-section-slide-fn: new-section-slide,

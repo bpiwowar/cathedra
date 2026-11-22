@@ -205,9 +205,62 @@
 /// `text` is the plain-text version (outline); `body` keeps the markup.
 #let synopsis(body) = [#metadata((text: plain(body), body: body))<synopsis>]
 
-/// Slide types (`#slide-type("optional")`…): anywhere in a slide.
-/// Rendered as nothing; the outline and the structure browser badge the slide.
+/// Slide types (`#slide-type("optional")`…): anywhere in a slide. The
+/// outline and the structure browser badge the slide; the template shows
+/// them on the slide with `slide-type-marks()`.
 #let slide-type(..names) = [#metadata(names.pos())<slide-type>]
+
+/// The icons of the slide types: (Font Awesome code point, its name). A type
+/// not in here shows as its name.
+#let slide-type-icons = (
+  optional: (0xf219, "diamond"),
+  practical: (0xf5fc, "laptop-code"),
+  todo: (0xf85e, "person-digging"),
+)
+
+/// The default display of a slide's types: a small grey icon for each
+/// (`todo` left out: `#todo` draws its own note).
+/// -> content
+#let slide-type-badge(
+  /// The slide's types, in order, without duplicates. -> array
+  types,
+) = {
+  let shown = types.filter(t => t != "todo")
+  set text(size: 0.9em, fill: muted)
+  shown
+    .map(t => if t in slide-type-icons {
+      box(fa(slide-type-icons.at(t).at(0)))
+    } else { box(t) })
+    .join(h(0.4em))
+}
+
+#let _slide-type-display = state("slide-type-display", slide-type-badge)
+
+/// How `slide-type-marks()` shows the types: a function of the slide's
+/// types (an array of strings) returning content, or `none` to show
+/// nothing. A template sets it in its preamble; `slide-type-badge` by default.
+#let set-slide-type-display(f) = _slide-type-display.update(_ => f)
+
+/// The types of the slide on the current page (in a `context`).
+/// -> array
+#let current-slide-types() = {
+  let page = here().page()
+  query(<slide-type>)
+    .filter(m => m.location().page() == page)
+    .map(m => m.value)
+    .flatten()
+    .dedup()
+}
+
+/// The current slide's types, shown as `set-slide-type-display` says
+/// (nothing if the slide has none): what a template puts in its header,
+/// e.g. on the right (`h(1fr)`).
+/// -> content
+#let slide-type-marks() = context {
+  let f = _slide-type-display.get()
+  let types = current-slide-types()
+  if f != none and types.len() > 0 { f(types) }
+}
 
 // --------------------------------------------------------------- web parts
 /// The same source gives two outputs: `--input target=web` is the PDF behind
