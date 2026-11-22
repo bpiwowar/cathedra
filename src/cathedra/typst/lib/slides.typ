@@ -34,17 +34,28 @@
 /// the engine reads no course file itself. All of it is optional: the course
 /// reads these (gitignored) files only when cathedra compiles
 /// (`generated`, below), so that plain `typst compile` works from a clone.
-/// - ref-links: bib key → {zotero, doi, url}, the links of `#reference`
+/// - ref-links: bib key → {zotero, doi, url, ids}, the links of `#reference`
+///   and the identifiers (DOI, arXiv, URL) it finds the entries by
 ///   (lib/refs-links.json, `cathedra sync`)
 /// - widget-shots: slot key → "/.cache/widgets/<hash>.png", the widgets'
 ///   pictures for print (.cache/widgets/manifest.json, `cathedra snapshots`)
 /// (`image-cache`, API 3, is accepted and ignored: fetched images are files of
 /// the course since API 4, docs/images.md)
-#let course-data = state("cathedra-course-data", (ref-links: (:), widget-shots: (:)))
-#let course-setup(ref-links: (:), image-cache: none, widget-shots: (:)) = course-data.update((
-  ref-links: ref-links,
-  widget-shots: widget-shots,
-))
+#let course-data = state("cathedra-course-data", (ref-links: (:), ref-ids: (:), ref-titles: (:), widget-shots: (:)))
+#let course-setup(ref-links: (:), image-cache: none, widget-shots: (:)) = {
+  // identifier (canonical, `_canonical`) → bib key, for `#reference("doi://…")`
+  let ref-ids = (:)
+  for (key, l) in ref-links {
+    for i in l.at("ids", default: ()) { ref-ids.insert(i, key) }
+  }
+  // title (`_norm-title`) → bib key, for a reference by its text only
+  let ref-titles = (:)
+  for (key, l) in ref-links {
+    let t = l.at("title", default: "")
+    if t != "" { ref-titles.insert(t, key) }
+  }
+  course-data.update((ref-links: ref-links, ref-ids: ref-ids, ref-titles: ref-titles, widget-shots: widget-shots))
+}
 
 /// Whether cathedra compiles this (`--input cathedra=1`; the former
 /// `--input typst-slides=1` too): the course's generated files are then there
@@ -538,29 +549,6 @@
 /// Whether the current page is a sidebar slide (in a `context`).
 #let has-sidebar() = query(<sidebar-layout>).any(m => m.location().page() == here().page())
 
-/// Full reference(s), small, at the end of a slide: `#reference(<key>)`. A
-/// newspaper icon in front is the link, to the Zotero item in the
-/// dev server (`--input dev=1`), else to the DOI, else to the URL (the
-/// course data's `ref-links`). In a `context`.
-#let dev = sys.inputs.at("dev", default: "0") == "1"
-#let ref-url(key) = {
-  let l = course-data.get().ref-links.at(str(key), default: (:))
-  let pick = if dev { (l.at("zotero", default: none),) } else { () }
-  (..pick, l.at("doi", default: none), l.at("url", default: none)).find(u => u != none)
-}
-#let ref-color = rgb("#000044")
-#let reference(..keys) = block(above: 0.9em, text(size: 0.55em, fill: ref-color, style: "italic", context {
-  for k in keys.pos() {
-    let url = ref-url(k)
-    let icon = text(style: "normal", fill: ref-color, fa(0xf1ea, solid: false))
-    block(above: 0.25em, below: 0.25em, {
-      if url != none { link(url, icon) } else { icon }
-      h(0.3em)
-      cite(k, form: "full")
-    })
-  }
-}))
-
 // ------------------------------------------------------- inside a slide
 /// A heading inside a slide (level 1 to 3, from the largest).
 #let subhead(level: 1, body) = block(above: 1em, below: 0.55em, text(
@@ -813,6 +801,119 @@
   let n = note.pos().at(0, default: [to check])
   _work-note("check", "👀", rgb("#a35a00"), rgb("#fff6e0"), n)
 }
+
+/// Full reference(s), small, at the end of a slide. Each is a bib key
+/// (`#reference(<key>)`) or a portable identifier, found in the course's .bib
+/// by its `doi` / `url` / `eprint` (lib/refs-links.json, `cathedra sync`):
+/// `"doi://10.…"` (or `"10.…"`, `"https://doi.org/…"`), an arXiv id or link
+/// (`"arXiv:2410.06205"`), an ISBN (`"isbn:978-…"`), a URL; followed by its
+/// text, `Author et al. year, Title` (`"doi://10.… Doe et al. 2024, A Title"`,
+/// `"<key> Doe et al. 2024, A Title"`): shown when the .bib does not have the
+/// entry, and found by when the string has no identifier. A newspaper icon in front is the link: to
+/// the Zotero item in the dev server (`--input dev=1`, the course's ZOTERO
+/// option), else to the DOI, else to the URL. An identifier not in the .bib
+/// shows as a link, and, when cathedra compiles, marks the slide `check`
+/// (with ZOTERO, `cathedra sync` fetches it from Zotero into the .bib). In a
+/// `context`.
+#let dev = sys.inputs.at("dev", default: "0") == "1"
+#let ref-url(key) = {
+  let l = course-data.get().ref-links.at(str(key), default: (:))
+  let pick = if dev { (l.at("zotero", default: none),) } else { () }
+  (..pick, l.at("doi", default: none), l.at("url", default: none)).find(u => u != none)
+}
+#let ref-color = rgb("#000044")
+
+#let _arxiv(i) = "arxiv:" + lower(i.trim()).replace(regex("v\d+$"), "")
+/// A reference's identifier, normalised as `canonical` in cathedra's sync.py
+/// (keep them alike): `doi:<doi>`, `arxiv:<id>`, `isbn:<digits>`,
+/// `url:<host/path>`; none.
+#let _canonical(s) = {
+  let s = lower(s.trim())
+  let m = s.match(regex("^(?:doi:(?://)?\s*|https?://(?:dx\.)?doi\.org/)(\S+)$"))
+  let doi = if m != none { m.captures.at(0) } else if (
+    s.match(regex("^(?:10\.\d{4,}/\S+|10/\w+)$")) != none
+  ) { s }
+  if doi != none {
+    let a = doi.match(regex("^10\.48550/arxiv\.(\S+)$"))
+    return if a != none { _arxiv(a.captures.at(0)) } else { "doi:" + doi }
+  }
+  let m = s.match(regex("^arxiv:\s*(\S+)$"))
+  if m != none { return _arxiv(m.captures.at(0)) }
+  m = s.match(regex("^isbn:\s*([0-9x][0-9x -]*)$"))
+  if m != none { return "isbn:" + m.captures.at(0).replace(regex("[ -]"), "") }
+  m = s.match(regex("^https?://(?:www\.|export\.)?arxiv\.org/(?:abs|pdf)/(.+?)(?:\.pdf)?/?$"))
+  if m != none { return _arxiv(m.captures.at(0)) }
+  m = s.match(regex("^https?://(?:www\.)?(\S+?)/?$"))
+  if m != none { return "url:" + m.captures.at(0) }
+  none
+}
+/// The link of an identifier not in the .bib.
+#let _ident-url(s) = {
+  let c = _canonical(s)
+  if c == none { none } else if c.starts-with("doi:") { "https://doi.org/" + c.slice(4) } else if c.starts-with(
+    "arxiv:",
+  ) { "https://arxiv.org/abs/" + c.slice(6) } else if c.starts-with("isbn:") {
+    "https://openlibrary.org/isbn/" + c.slice(5)
+  } else { s.trim() }
+}
+
+/// A title for comparison (as `norm_title` in sync.py): lower case,
+/// letters and digits only.
+#let _norm-title(s) = lower(s).replace(regex("[\W_]+"), "")
+/// A reference string (as `parse` in sync.py): `<key> text`, `<identifier>
+/// text` or a text (a title): (key, ident (canonical), raw, text).
+#let _parse(s) = {
+  let s = s.trim()
+  let m = s.match(regex("^<([^>]+)>\s*((?s).*)$"))
+  if m != none { return (key: m.captures.at(0), ident: none, raw: none, text: m.captures.at(1)) }
+  let m = s.match(regex("^(\S+)\s*((?s).*)$"))
+  let c = if m != none { _canonical(m.captures.at(0)) }
+  if c != none { return (key: none, ident: c, raw: m.captures.at(0), text: m.captures.at(1).trim()) }
+  (key: none, ident: none, raw: none, text: s)
+}
+/// The title of a reference's text `Author et al. 2024, Title` (as
+/// `title_part` in sync.py): the whole text without `year, `.
+#let _title-part(text) = {
+  let m = text.trim().match(regex("^(?s).*?\b\d{4}[a-z]?,\s*(.+)$"))
+  if m != none { m.captures.at(0) } else { text.trim() }
+}
+
+#let reference(..keys) = block(above: 0.9em, text(size: 0.55em, fill: ref-color, style: "italic", context {
+  let data = course-data.get()
+  let icon = text(style: "normal", fill: ref-color, fa(0xf1ea, solid: false))
+  for k in keys.pos() {
+    let r = if type(k) == label { (key: str(k), ident: none, raw: none, text: "") } else { _parse(k) }
+    // the bib key: given (cited as is without the course's data, as
+    // `<key>`: plain `typst compile`), else by identifier, else by title
+    let key = if r.key != none {
+      if not generated or r.key in data.ref-links { label(r.key) }
+    } else if r.ident != none and r.ident in data.ref-ids {
+      label(data.ref-ids.at(r.ident))
+    } else if r.text != "" {
+      let t = _norm-title(_title-part(r.text))
+      if t in data.ref-titles { label(data.ref-titles.at(t)) }
+    }
+    block(above: 0.25em, below: 0.25em, if key != none {
+      let url = ref-url(key)
+      if url != none { link(url, icon) } else { icon }
+      h(0.3em)
+      cite(key, form: "full")
+    } else {
+      // not in the .bib: the text (else the identifier), linked
+      let url = if r.raw != none { _ident-url(r.raw) }
+      let shown = if r.text != "" { r.text } else if r.raw != none { r.raw } else { "<" + r.key + ">" }
+      if url != none { link(url, icon) } else { icon }
+      h(0.3em)
+      if url != none { link(url, shown) } else { shown }
+      // to check (`generated`: the .bib's ids are known)
+      if generated and sys.inputs.at("todo", default: "1") != "0" {
+        slide-type("check")
+        h(0.4em)
+        text(style: "normal", fill: rgb("#a35a00"))[👀 not in the bibliography]
+      }
+    })
+  }
+}))
 
 /// One caption per step, in the same place. Named, one per step name:
 /// `#step-captions(sa: […], ffn: […])`; or in order, the i-th (from 0) on step

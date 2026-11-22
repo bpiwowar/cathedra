@@ -114,14 +114,52 @@ def setup(
 
 @app.command(rich_help_panel=SETUP)
 def sync(
-    bib: Annotated[
-        Path, typer.Argument(help="the Zotero / Better BibTeX bibliography")
-    ],
+    bib: Annotated[Path, typer.Argument(help="the course's bibliography")],
+    zotero: Annotated[
+        bool,
+        typer.Option(
+            "--zotero",
+            help="use the local Zotero app: fetch the references cited by DOI / URL "
+            "into the .bib, the dev links (lib/zotero.json)",
+        ),
+    ] = False,
+    src: Annotated[
+        Optional[Path], typer.Option(help="the sources, scanned for #reference")
+    ] = None,
+    refresh: Annotated[
+        bool, typer.Option(help="look up again the entries Zotero did not have")
+    ] = False,
+    annotate: Annotated[
+        bool,
+        typer.Option(
+            "--annotate",
+            help="give the #reference of the sources (--src) their text "
+            "(Author et al. year, Title) from the .bib",
+        ),
+    ] = False,
+    migrate: Annotated[
+        bool,
+        typer.Option(
+            "--migrate",
+            help="move the slide-app `zotero` fields of the .bib to lib/zotero.json, "
+            "drop its `file` fields",
+        ),
+    ] = False,
 ) -> None:
     """lib/refs-links.json (the links of #reference); fails on a duplicate key."""
-    from .sync import main
+    from . import sync as s
 
-    if main(str(bib)):
+    if migrate:
+        s.migrate(str(bib))
+        return
+    if annotate:
+        if not src:
+            raise typer.BadParameter("--annotate needs --src")
+        s.annotate(str(bib), src)
+        return
+    if s.main(
+        str(bib), use_zotero=zotero, src=str(src) if src else None, refresh=refresh
+    ):
         raise typer.Exit(1)
 
 

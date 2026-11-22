@@ -76,7 +76,6 @@ def test_typst_cli_compiles_a_clone(course_dir):
 
 def test_sync_fails_on_duplicate_keys(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(sync, "zotero_user", lambda: None)
     bib = tmp_path / "main.bib"
     bib.write_text("@article{a,\n title={A}\n}\n@article{b,\n title={B}\n}\n")
     assert sync.main(str(bib)) == 0

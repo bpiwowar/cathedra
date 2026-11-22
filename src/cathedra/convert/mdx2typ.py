@@ -76,22 +76,22 @@ def course_bib() -> str:
 
 
 def bib_index():
-    """doi / zotero item key (lower case) -> bib key."""
+    """doi / zotero item key (lower case) -> bib key. The Zotero items are
+    those of lib/zotero.json (local): the slide-app `zotero` fields of the
+    .bib are first moved there (`cathedra sync --migrate`)."""
+    from .. import sync
+
+    bib = TYPST / course_bib()
+    if re.search(r"(?im)^\s*zotero\s*=", bib.read_text()):
+        sync.migrate(str(bib))
     index = {}
-    text = (TYPST / course_bib()).read_text()
-    for chunk in re.split(r"(?m)^(?=@)", text):
-        m = re.match(r"@\w+\{([^,\s]+),", chunk)
-        if not m:
-            continue
-        key = m.group(1)
+    for key, chunk in sync.entries(bib.read_text()):
         index["key:" + key] = key
-        if d := re.search(r"(?im)^\s*doi\s*=\s*\{([^}]+)\}", chunk):
-            index["doi://" + d.group(1).strip().lower()] = key
-        # `zotero={user:ID/KEY}` (scoped) or `zotero = {KEY}` (bare key)
-        if z := re.search(
-            r"zotero\s*=\s*\{(?:(?:library|user|group):\d+/)?(\w+)", chunk
-        ):
-            index["zotero://select/library/items/" + z.group(1).lower()] = key
+        if d := sync.field(chunk, "doi"):
+            index["doi://" + d.lower()] = key
+    for key, ref in sync.load_cache().items():
+        if ref:
+            index["zotero://select/library/items/" + ref.split("/")[-1].lower()] = key
     return index
 
 

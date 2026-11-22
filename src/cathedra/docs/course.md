@@ -86,6 +86,10 @@ cathedra=1`, which cathedra passes; it writes the missing ones,
 empty). Plain `typst compile` and an editor read none of them, and compile
 from the files git keeps (see [building](building.md#without-cathedra)).
 
+With the `ZOTERO` option, `cathedra sync` also keeps `lib/zotero.json`, the
+author's own Zotero items (see [citations](citations.md)): gitignore it too
+(`lib/` as a whole, or `lib/refs-links.json` and `lib/zotero.json`).
+
 Everything `slides.typ` defines (and Touying's `#pause`, `#only`…) comes
 along. See [templates](templates.md) for the options.
 

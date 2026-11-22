@@ -31,10 +31,14 @@
 #                    a deck <id> is lectures/<id>.typ or lectures/<id>/<id>.typ)
 #   DEV              DEV=1: `make html` builds for the author (E opens the
 #                    sources, references link to Zotero), as `make serve` does
+#   ZOTERO           ZOTERO=1: the local Zotero app completes the .bib with the
+#                    references cited by DOI / URL, and gives the dev links
+#                    (lib/zotero.json); see docs/citations.md
 
 #@option BIB the Zotero / Better BibTeX bibliography (required) {set by the course}
 #@option SOCKET serve on this Unix socket instead of PORT {none}
 #@option DEV DEV=1: `make html` builds for the author (E opens the sources, references link to Zotero) {unset}
+#@option ZOTERO ZOTERO=1: the local Zotero app fetches the references cited by DOI / URL into the .bib, and gives the dev links {unset}
 TYPST_APP       := $(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
 # the checkout of cathedra this file is in, if any (textually: TYPST_APP may
 # be a link)
@@ -102,7 +106,7 @@ TS       := $(CATHEDRA)
 ENGINE_DIR := $(firstword $(wildcard cathedra slide-app) cathedra)
 GEN      := lib/refs-links.json $(ENGINE_DIR)
 
-.PHONY: help update-makefile check-makefile unused-media optimize-images compute-svg-bb install-vscode open-slide images check-images setup outline outline-slides duplicates serve html build snapshots pdf handout check format convert space live-test clean migrate check-version
+.PHONY: migrate-bib ALWAYS help update-makefile check-makefile unused-media optimize-images compute-svg-bb install-vscode open-slide images check-images setup outline outline-slides duplicates serve html build snapshots pdf handout check format convert space live-test clean migrate check-version
 
 # `make help`: the text below, in sections. A line at column 0 is a section
 # title, "  <target>  <description>" an entry, a deeper line its continuation.
@@ -113,6 +117,7 @@ Typst slides (cathedra) — decks: $(DECKS)
 
 Set up
   setup           the engine link (cathedra), bibliography
+  migrate-bib     slide-app `zotero` fields of the .bib -> lib/zotero.json
   install-vscode  VS Code task (show the slide under the cursor) and Tinymist settings
 
 Write and preview
@@ -215,8 +220,18 @@ setup:
 
 # the links of the references, refreshed when the bib changes (fails on a
 # duplicate key)
-lib/refs-links.json: $(BIB)
-	$(TS) sync $(BIB)
+# With ZOTERO, on every run (the sources may cite a new DOI / URL): cheap
+# when nothing is missing (lib/zotero.json caches the lookups)
+SYNC_FLAGS = $(if $(filter 1 yes true,$(ZOTERO)),--zotero --src=$(SRC))
+lib/refs-links.json: $(BIB) $(if $(filter 1 yes true,$(ZOTERO)),ALWAYS)
+	$(TS) sync $(SYNC_FLAGS) $(BIB)
+
+# the slide-app `zotero = {…}` fields of the .bib -> lib/zotero.json (local),
+# the `file = {…}` fields (local paths) dropped
+migrate-bib:
+	$(TS) sync --migrate $(BIB)
+
+ALWAYS:
 
 outline: $(GEN)
 	@$(TS) outline $(DECKS)
